@@ -31,9 +31,9 @@ export function DashboardCharts() {
   });
 
   const chartData = months.map(m => {
-    const txForMonth = transactions.filter(t => t.date.startsWith(m.yearMonth));
-    const receitas = txForMonth.filter(t => t.type === "income").reduce((acc, curr) => acc + curr.value, 0);
-    const despesas = txForMonth.filter(t => t.type === "expense").reduce((acc, curr) => acc + curr.value, 0);
+    const txForMonth = transactions.filter(t => t.date && t.date.startsWith(m.yearMonth));
+    const receitas = txForMonth.filter(t => t.type === "income").reduce((acc, curr) => acc + (curr.value || 0), 0);
+    const despesas = txForMonth.filter(t => t.type === "expense").reduce((acc, curr) => acc + (curr.value || 0), 0);
 
     return {
       name: m.monthStr.charAt(0).toUpperCase() + m.monthStr.slice(1),

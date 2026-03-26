@@ -29,9 +29,9 @@ export function RelatoriosCharts() {
   });
 
   const evolucaoRendaExtra = months.map(m => {
-    const txForMonth = incomes.filter(t => t.date.startsWith(m.yearMonth));
-    const pm = txForMonth.filter(i => i.cat.toLowerCase().includes("pm")).reduce((acc, curr) => acc + curr.value, 0);
-    const bicos = txForMonth.filter(i => i.cat.toLowerCase().includes("bico")).reduce((acc, curr) => acc + curr.value, 0);
+    const txForMonth = incomes.filter(t => t.date && t.date.startsWith(m.yearMonth));
+    const pm = txForMonth.filter(i => i.cat.toLowerCase().includes("pm")).reduce((acc, curr) => acc + (curr.value || 0), 0);
+    const bicos = txForMonth.filter(i => i.cat.toLowerCase().includes("bico")).reduce((acc, curr) => acc + (curr.value || 0), 0);
 
     return {
       month: m.monthStr.charAt(0).toUpperCase() + m.monthStr.slice(1),

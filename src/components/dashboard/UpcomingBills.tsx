@@ -22,11 +22,15 @@ export function UpcomingBills() {
   const pendingBills = transactions
     .filter(t => t.status === "pendente")
     // Ordenar data crescente (mais próximo de vencer primeiro)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateA - dateB;
+    })
     .slice(0, 5);
 
   const getPriorityInfo = (bill: any) => {
-    const dueDate = new Date(bill.date + "T00:00:00");
+    const dueDate = bill.date ? new Date(bill.date + "T00:00:00") : new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

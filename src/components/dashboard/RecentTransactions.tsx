@@ -46,7 +46,7 @@ export function RecentTransactions() {
                   </div>
                   <div>
                     <p className="text-sm font-medium leading-none">{tx.desc}</p>
-                    <p className="text-xs text-muted-foreground mt-1.5">{tx.cat} • {format(parseISO(tx.date), "dd MMM yyyy", { locale: ptBR })}</p>
+                    <p className="text-xs text-muted-foreground mt-1.5">{tx.cat} • {tx.date ? format(parseISO(tx.date), "dd MMM yyyy", { locale: ptBR }) : 'S/ data'}</p>
                   </div>
                 </div>
                 <div className={cn(
