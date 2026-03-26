@@ -20,8 +20,14 @@ export default function EmprestimosPage() {
   const { loans, loading: loansLoading } = useLoans();
   const { transactions: incomes, loading: incomesLoading } = useTransactions("income");
   const loading = loansLoading || incomesLoading;
+  const recurringLoans = loans.filter((loan) => loan.isRecurring);
+  const installmentLoans = loans.filter((loan) => !loan.isRecurring);
 
   const parcelasDoMes = loans.reduce((acc, loan) => {
+    if (loan.isRecurring) {
+      return acc + loan.installmentValue;
+    }
+
     // Só conta se ainda tem parcelas a pagar
     if (loan.paidInstallments < loan.totalInstallments) {
       return acc + loan.installmentValue;
@@ -29,11 +35,13 @@ export default function EmprestimosPage() {
     return acc;
   }, 0);
 
-  const saldoDevedorTotal = loans.reduce((acc, loan) => {
+  const totalRecurringMonthly = recurringLoans.reduce((acc, loan) => acc + loan.installmentValue, 0);
+
+  const saldoDevedorTotal = installmentLoans.reduce((acc, loan) => {
     return acc + ((loan.totalInstallments - loan.paidInstallments) * loan.installmentValue);
   }, 0);
 
-  const totalBorrowed = loans.reduce((acc, loan) => {
+  const totalBorrowed = installmentLoans.reduce((acc, loan) => {
     return acc + (loan.totalInstallments * loan.installmentValue);
   }, 0);
 
@@ -69,7 +77,7 @@ export default function EmprestimosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Consignados</h2>
-          <p className="text-muted-foreground mt-1">Acompanhe seus empréstimos e parcelamentos longos.</p>
+          <p className="text-muted-foreground mt-1">Acompanhe seus empréstimos parcelados e descontos recorrentes.</p>
           <p className="text-xs text-muted-foreground mt-1">Renda base considerada: {referenceMonthLabel}.</p>
         </div>
         <div className="flex items-center space-x-2">
@@ -106,7 +114,7 @@ export default function EmprestimosPage() {
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${marginAvailable.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Baseado na margem de 30%
+              {loading ? "Calculando..." : `R$ ${totalRecurringMonthly.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} em descontos recorrentes por mês`}
             </p>
           </CardContent>
         </Card>
@@ -123,7 +131,9 @@ export default function EmprestimosPage() {
               <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${percentPaid}%` }}></div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {percentPaid.toFixed(1)}% já pago de todos os contratos vigentes
+              {installmentLoans.length === 0
+                ? "Nenhum contrato parcelado cadastrado."
+                : `${percentPaid.toFixed(1)}% já pago dos contratos parcelados`}
             </p>
           </CardContent>
         </Card>

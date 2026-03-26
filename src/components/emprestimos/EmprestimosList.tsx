@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Landmark, Calendar, MoreHorizontal } from "lucide-react";
+import { Landmark, Calendar, MoreHorizontal, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
@@ -25,9 +25,10 @@ export function EmprestimosList() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {loans.map((loan) => {
-        const progress = loan.totalInstallments > 0 ? (loan.paidInstallments / loan.totalInstallments) * 100 : 0;
-        const remainingStr = loan.totalInstallments - loan.paidInstallments;
-        const remainingAmount = loan.totalValue - (loan.paidInstallments * loan.installmentValue);
+        const isRecurring = loan.isRecurring;
+        const progress = !isRecurring && loan.totalInstallments > 0 ? (loan.paidInstallments / loan.totalInstallments) * 100 : 0;
+        const remainingInstallments = Math.max(0, loan.totalInstallments - loan.paidInstallments);
+        const remainingAmount = Math.max(0, loan.totalValue - (loan.paidInstallments * loan.installmentValue));
 
         return (
           <Card key={loan.id} className="group overflow-hidden relative shadow-sm hover:shadow-md transition-shadow">
@@ -40,7 +41,7 @@ export function EmprestimosList() {
                   </div>
                   <div>
                     <CardTitle className="text-base truncate">{loan.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">Empréstimo</p>
+                    <p className="text-sm text-muted-foreground">{isRecurring ? "Cobranca recorrente" : "Emprestimo parcelado"}</p>
                   </div>
                 </div>
                 <DropdownMenu>
@@ -49,14 +50,16 @@ export function EmprestimosList() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setEditItem(loan)}>Editar</DropdownMenuItem>
-                    <DropdownMenuItem onClick={async () => {
-                      if (loan.paidInstallments < loan.totalInstallments) {
-                        await updateLoan(loan.id, { paidInstallments: loan.paidInstallments + 1 });
-                        toast.success(`Parcela do empréstimo ${loan.name} paga!`);
-                      } else {
-                        toast.error(`Empréstimo ${loan.name} já quitado!`);
-                      }
-                    }}>Pagar Parcela Atual</DropdownMenuItem>
+                    {!isRecurring ? (
+                      <DropdownMenuItem onClick={async () => {
+                        if (loan.paidInstallments < loan.totalInstallments) {
+                          await updateLoan(loan.id, { paidInstallments: loan.paidInstallments + 1 });
+                          toast.success(`Parcela do empréstimo ${loan.name} paga!`);
+                        } else {
+                          toast.error(`Empréstimo ${loan.name} já quitado!`);
+                        }
+                      }}>Pagar Parcela Atual</DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem onClick={async () => {
                       await deleteLoan(loan.id);
                       toast.error(`Empréstimo ${loan.name} apagado.`);
@@ -73,23 +76,35 @@ export function EmprestimosList() {
                     <span className="text-sm text-muted-foreground ml-1">/mês</span>
                   </div>
                   <Badge variant="outline" className="bg-background text-xs font-normal border-border">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Faltam {remainingStr}
+                    {isRecurring ? <RefreshCcw className="w-3 h-3 mr-1" /> : <Calendar className="w-3 h-3 mr-1" />}
+                    {isRecurring ? "Mensal" : `Faltam ${remainingInstallments}`}
                   </Badge>
                 </div>
               </div>
 
-              <div className="space-y-1.5 mt-5 bg-muted/30 p-3 rounded-lg border border-border/50">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-medium text-amber-600 dark:text-amber-500">{Math.round(progress)}% quitado</span>
+              {isRecurring ? (
+                <div className="space-y-1.5 mt-5 bg-muted/30 p-3 rounded-lg border border-border/50">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Tipo</span>
+                    <span className="font-medium text-amber-600 dark:text-amber-500">Recorrente</span>
+                  </div>
+                  <p className="text-[11px] pt-1 text-muted-foreground">
+                    Esse desconto se repete mensalmente e impacta sua margem, mas nao possui saldo devedor ou prazo final no contrato.
+                  </p>
                 </div>
-                <Progress value={progress} className="h-2 bg-muted-foreground/15 [&>div]:bg-amber-500" />
-                <div className="flex justify-between text-[11px] pt-1 text-muted-foreground">
-                  <span>{loan.paidInstallments} pagas</span>
-                  <span>Dívida: R$ {remainingAmount.toLocaleString("pt-BR")}</span>
+              ) : (
+                <div className="space-y-1.5 mt-5 bg-muted/30 p-3 rounded-lg border border-border/50">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progresso</span>
+                    <span className="font-medium text-amber-600 dark:text-amber-500">{Math.round(progress)}% quitado</span>
+                  </div>
+                  <Progress value={progress} className="h-2 bg-muted-foreground/15 [&>div]:bg-amber-500" />
+                  <div className="flex justify-between text-[11px] pt-1 text-muted-foreground">
+                    <span>{loan.paidInstallments} pagas</span>
+                    <span>Dívida: R$ {remainingAmount.toLocaleString("pt-BR")}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         );

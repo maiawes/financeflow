@@ -9,6 +9,7 @@ export interface Loan {
   installmentValue: number;
   totalInstallments: number;
   paidInstallments: number;
+  isRecurring?: boolean;
 }
 
 export function useLoans() {
@@ -19,7 +20,19 @@ export function useLoans() {
     const q = query(collection(db, "loans"));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Loan));
+      const docs = snapshot.docs.map((doc) => {
+        const data = doc.data() as Partial<Loan>;
+
+        return {
+          id: doc.id,
+          name: data.name ?? "",
+          totalValue: data.totalValue ?? 0,
+          installmentValue: data.installmentValue ?? 0,
+          totalInstallments: data.totalInstallments ?? 0,
+          paidInstallments: data.paidInstallments ?? 0,
+          isRecurring: data.isRecurring ?? false,
+        } as Loan;
+      });
       
       // Ordena por nome
       docs.sort((a, b) => a.name.localeCompare(b.name));

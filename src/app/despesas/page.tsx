@@ -8,6 +8,7 @@ import { DespesasTable } from "@/components/despesas/DespesasTable";
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { useTransactions } from "@/hooks/useTransactions";
+import { Input } from "@/components/ui/input";
 import {
   formatMonthKey,
   getCurrentMonthKey,
@@ -17,14 +18,16 @@ import {
 
 export default function DespesasPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const { transactions, loading } = useTransactions("expense");
 
   const currentMonth = getCurrentMonthKey();
   const referenceMonth = getReferenceMonthFromTransactions(transactions, currentMonth);
+  const effectiveMonth = selectedMonth ?? referenceMonth;
   const currentMonthLabel = formatMonthKey(currentMonth);
-  const referenceMonthLabel = formatMonthKey(referenceMonth);
-  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
-  const isShowingFallbackMonth = referenceMonth !== currentMonth;
+  const effectiveMonthLabel = formatMonthKey(effectiveMonth);
+  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, effectiveMonth));
+  const isShowingFallbackMonth = effectiveMonth !== currentMonth;
 
   const totalPago = monthTransactions
     .filter((transaction) => transaction.status === "pago")
@@ -44,14 +47,29 @@ export default function DespesasPage() {
           <p className="text-muted-foreground mt-1">Gerencie suas contas e gastos.</p>
           <p className="text-xs text-muted-foreground mt-1">
             {isShowingFallbackMonth
-              ? `Sem despesas em ${currentMonthLabel}. Exibindo ${referenceMonthLabel}, o mês mais próximo com lançamentos.`
-              : `Resumo de ${referenceMonthLabel}.`}
+              ? `Sem despesas em ${currentMonthLabel}. Filtrando vencimentos de ${effectiveMonthLabel}.`
+              : `Resumo de ${effectiveMonthLabel}.`}
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => toast.info("Filtro de contas em aprovação.")}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5">
             <Filter className="w-4 h-4 mr-2" />
-            Filtrar
+            <Input
+              type="month"
+              value={effectiveMonth}
+              onChange={(event) => setSelectedMonth(event.target.value)}
+              className="h-7 border-0 bg-transparent px-0 py-0 shadow-none focus-visible:ring-0"
+              aria-label="Filtrar despesas por vencimento"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden sm:flex"
+            onClick={() => setSelectedMonth(null)}
+            disabled={selectedMonth === null}
+          >
+            Vencimentos do mês-base
           </Button>
           <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => toast.success("Planilha de Despesas baixada com sucesso!")}>
             <Download className="w-4 h-4 mr-2" />
@@ -99,10 +117,10 @@ export default function DespesasPage() {
 
       <Card className="shadow-sm border-border/50 overflow-hidden">
         <CardHeader className="px-6 py-4 border-b border-border/50 bg-muted/10">
-          <CardTitle>Saídas de {referenceMonthLabel}</CardTitle>
+          <CardTitle>Saídas com vencimento em {effectiveMonthLabel}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <DespesasTable referenceMonth={referenceMonth} />
+          <DespesasTable referenceMonth={effectiveMonth} />
         </CardContent>
       </Card>
 
