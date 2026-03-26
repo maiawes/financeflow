@@ -3,35 +3,38 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useState } from "react";
+import { format, getDaysInMonth, startOfMonth, getDay, addMonths, subMonths, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const DAYS_OF_WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-const mockEvents = [
-  { day: 5, title: "Salário Base", type: "income", amount: 5400 },
-  { day: 5, title: "Energia Elétrica", type: "expense", amount: 245.5 },
-  { day: 10, title: "Aluguel", type: "expense", amount: 1200 },
-  { day: 15, title: "Bico", type: "income", amount: 1200 },
-  { day: 20, title: "Parcela Carro", type: "expense", amount: 850 },
-  { day: 25, title: "Consignado BB", type: "expense", amount: 550 },
-];
-
 export function CalendarioView() {
-  // Hardcoded for Mar 2026 for now (starts on Sunday, 31 days)
-  const daysInMonth = 31;
-  const firstDayOfMonth = 0; // 0 = Sunday
+  const { transactions } = useTransactions();
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const daysInMonth = getDaysInMonth(currentDate);
+  const start = startOfMonth(currentDate);
+  const firstDayOfMonth = getDay(start); // 0 = Sunday
   
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
+  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const monthName = format(currentDate, "MMMM yyyy", { locale: ptBR });
+  const yearMonth = format(currentDate, "yyyy-MM");
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 sm:px-0 pb-6 sm:pt-0 border-b border-border/50 sm:border-none mb-4 sm:mb-0">
-        <h3 className="text-xl font-bold tracking-tight">Março 2026</h3>
+        <h3 className="text-xl font-bold tracking-tight capitalize">{monthName}</h3>
         <div className="flex space-x-2">
-          <Button variant="outline" size="icon" className="w-8 h-8 sm:w-10 sm:h-10">
+          <Button variant="outline" size="icon" className="w-8 h-8 sm:w-10 sm:h-10" onClick={prevMonth}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="icon" className="w-8 h-8 sm:w-10 sm:h-10">
+          <Button variant="outline" size="icon" className="w-8 h-8 sm:w-10 sm:h-10" onClick={nextMonth}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -49,8 +52,9 @@ export function CalendarioView() {
         ))}
         
         {days.map((day) => {
-          const dayEvents = mockEvents.filter(e => e.day === day);
-          const isToday = day === 15; 
+          const dateStr = `${yearMonth}-${String(day).padStart(2, '0')}`;
+          const dayEvents = transactions.filter(e => e.date === dateStr);
+          const isToday = isSameDay(new Date(currentDate.getFullYear(), currentDate.getMonth(), day), new Date()); 
           
           return (
             <div 
@@ -77,10 +81,10 @@ export function CalendarioView() {
                       "px-1.5 py-1 text-[9px] sm:text-[10px] rounded flex flex-col leading-tight overflow-hidden",
                       evt.type === "income" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-rose-500/10 text-rose-700 dark:text-rose-400"
                     )}
-                    title={`${evt.title} - R$ ${evt.amount}`}
+                    title={`${evt.desc} - R$ ${evt.value}`}
                   >
-                    <span className="font-bold truncate">{evt.title}</span>
-                    <span className="opacity-80 font-medium truncate hidden sm:inline-block">R$ {evt.amount}</span>
+                    <span className="font-bold truncate">{evt.desc}</span>
+                    <span className="opacity-80 font-medium truncate hidden sm:inline-block">R$ {evt.value}</span>
                   </div>
                 ))}
               </div>
