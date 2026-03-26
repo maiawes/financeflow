@@ -89,8 +89,8 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
         toast.success(`${isIncome ? "Receita" : "Despesa"} criada!`);
       }
       onOpenChange(false);
-    } catch (e: any) {
-      toast.error("Erro ao salvar: " + e.message);
+    } catch (error) {
+      toast.error(`Erro ao salvar: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
     } finally {
       setLoading(false);
     }

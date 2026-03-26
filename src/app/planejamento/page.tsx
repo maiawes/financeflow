@@ -7,21 +7,70 @@ import { toast } from "sonner";
 import { SimuladorCenarios } from "@/components/planejamento/SimuladorCenarios";
 import { useTransactions } from "@/hooks/useTransactions";
 import { Loader2 } from "lucide-react";
-import { format } from "date-fns";
-import { isTransactionInMonth } from "@/lib/transactions";
+import { subMonths } from "date-fns";
+import { parseStoredDate } from "@/lib/date";
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  getReferenceMonthFromTransactions,
+  isTransactionInMonth,
+} from "@/lib/transactions";
+
+function isExtraIncomeCategory(category: string) {
+  const normalizedCategory = category.toLowerCase();
+
+  return normalizedCategory.includes("pm") || normalizedCategory.includes("bico") || normalizedCategory.includes("avuls");
+}
 
 export default function PlanejamentoPage() {
   const { transactions: incomes, loading: loading1 } = useTransactions("income");
   const { transactions: expenses, loading: loading2 } = useTransactions("expense");
-  const currentMonth = format(new Date(), "yyyy-MM");
-  const currentMonthIncomes = incomes.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
-  const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
+  const currentMonth = getCurrentMonthKey();
+  const referenceMonth = getReferenceMonthFromTransactions([...incomes, ...expenses], currentMonth);
+  const currentMonthLabel = formatMonthKey(currentMonth);
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
+  const referenceMonthDate = parseStoredDate(`${referenceMonth}-01`) ?? new Date();
+  const currentMonthIncomes = incomes.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
+  const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
 
   const totalIncome = currentMonthIncomes.reduce((acc, curr) => acc + curr.value, 0);
   const totalExpense = currentMonthExpenses.reduce((acc, curr) => acc + curr.value, 0);
   const balance = totalIncome - totalExpense;
   const loading = loading1 || loading2;
   const freePercentage = totalIncome > 0 ? Math.max(0, (balance / totalIncome) * 100) : 0;
+  const currentExtraIncome = currentMonthIncomes
+    .filter((transaction) => isExtraIncomeCategory(transaction.cat))
+    .reduce((acc, curr) => acc + curr.value, 0);
+  const previousExtraIncomeValues = Array.from({ length: 3 }, (_, index) => {
+    const monthKey = getCurrentMonthKey(subMonths(referenceMonthDate, index + 1));
+
+    return incomes
+      .filter(
+        (transaction) =>
+          isTransactionInMonth(transaction, monthKey) && isExtraIncomeCategory(transaction.cat),
+      )
+      .reduce((acc, curr) => acc + curr.value, 0);
+  }).filter((value) => value > 0);
+  const extraIncomeAverage =
+    previousExtraIncomeValues.length > 0
+      ? previousExtraIncomeValues.reduce((acc, value) => acc + value, 0) / previousExtraIncomeValues.length
+      : 0;
+  const extraIncomeDeltaPercentage =
+    extraIncomeAverage > 0 ? ((currentExtraIncome - extraIncomeAverage) / extraIncomeAverage) * 100 : 0;
+  const extraIncomeTrend = extraIncomeAverage === 0 ? "neutral" : currentExtraIncome < extraIncomeAverage ? "down" : "up";
+  const extraIncomeAlertTitle =
+    extraIncomeTrend === "neutral"
+      ? "Renda Extra"
+      : extraIncomeTrend === "down"
+        ? "Queda na Renda Extra"
+        : "Alta na Renda Extra";
+  const extraIncomeAlert =
+    extraIncomeAverage === 0
+      ? `Sua renda extra em ${referenceMonthLabel} soma R$ ${currentExtraIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. Continue registrando para liberar comparativos históricos.`
+      : currentExtraIncome < extraIncomeAverage
+        ? `Sua renda extra em ${referenceMonthLabel} ficou em R$ ${currentExtraIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, ${Math.abs(extraIncomeDeltaPercentage).toFixed(0)}% abaixo da média recente de R$ ${extraIncomeAverage.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`
+        : `Sua renda extra em ${referenceMonthLabel} está em R$ ${currentExtraIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, ${extraIncomeDeltaPercentage.toFixed(0)}% acima da média recente de R$ ${extraIncomeAverage.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`;
+  const isShowingFallbackMonth = referenceMonth !== currentMonth;
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 md:pb-8">
@@ -29,9 +78,14 @@ export default function PlanejamentoPage() {
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Planejamento do Mês</h2>
           <p className="text-muted-foreground mt-1">Visão geral do mês e simulação de cenários.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {isShowingFallbackMonth
+              ? `Sem movimentações em ${currentMonthLabel}. Exibindo ${referenceMonthLabel}, o mês mais próximo com lançamentos.`
+              : `Resumo de ${referenceMonthLabel}.`}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button size="sm" onClick={() => toast.success("Mês de Março de 2026 devidamente fechado com sucesso!")}>
+          <Button size="sm" onClick={() => toast.success(`${referenceMonthLabel} fechado com sucesso!`)}>
             Fechar Mês Atual
           </Button>
         </div>
@@ -105,13 +159,21 @@ export default function PlanejamentoPage() {
               </CardContent>
             </Card>
             
-            <Card className="border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-colors">
+            <Card
+              className={
+                extraIncomeTrend === "up"
+                  ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors"
+                  : "border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-colors"
+              }
+            >
               <CardContent className="p-4 flex gap-4">
-                <Target className="w-6 h-6 text-rose-500 shrink-0 mt-0.5" />
+                <Target className={extraIncomeTrend === "up" ? "w-6 h-6 text-emerald-500 shrink-0 mt-0.5" : "w-6 h-6 text-rose-500 shrink-0 mt-0.5"} />
                 <div>
-                  <h4 className="font-semibold text-rose-600 dark:text-rose-500 text-base">Queda na Renda Extra</h4>
-                  <p className="text-sm text-rose-600/80 dark:text-rose-500/80 mt-1">
-                    Sua previsão de bicos este mês (R$ 1.550) está 25% menor que a média dos últimos 3 meses (R$ 2.100). Isso pode impactar suas metas.
+                  <h4 className={extraIncomeTrend === "up" ? "font-semibold text-emerald-600 dark:text-emerald-500 text-base" : "font-semibold text-rose-600 dark:text-rose-500 text-base"}>
+                    {extraIncomeAlertTitle}
+                  </h4>
+                  <p className={extraIncomeTrend === "up" ? "text-sm text-emerald-600/80 dark:text-emerald-500/80 mt-1" : "text-sm text-rose-600/80 dark:text-rose-500/80 mt-1"}>
+                    {loading ? "Analisando..." : extraIncomeAlert}
                   </p>
                 </div>
               </CardContent>

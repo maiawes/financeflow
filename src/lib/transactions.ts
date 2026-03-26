@@ -4,10 +4,13 @@ import {
   getDate,
   getDaysInMonth,
   isAfter,
+  isValid,
+  parse,
   setDate,
   startOfMonth,
   subMonths,
 } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { parseStoredDate } from "@/lib/date";
 
 const RECURRING_ID_SEPARATOR = "__month__";
@@ -27,6 +30,49 @@ export function getTransactionMonth(date?: string | null) {
   const parsedDate = parseStoredDate(date);
 
   return parsedDate ? format(parsedDate, "yyyy-MM") : "";
+}
+
+export function getCurrentMonthKey(baseDate = new Date()) {
+  return format(baseDate, "yyyy-MM");
+}
+
+export function listTransactionMonths<T extends Pick<TransactionLike, "date">>(transactions: T[]) {
+  return Array.from(
+    new Set(
+      transactions
+        .map((transaction) => getTransactionMonth(transaction.date))
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+}
+
+export function getReferenceMonthFromTransactions<T extends Pick<TransactionLike, "date">>(
+  transactions: T[],
+  preferredMonth = getCurrentMonthKey(),
+) {
+  const months = listTransactionMonths(transactions);
+
+  if (months.length === 0) {
+    return preferredMonth;
+  }
+
+  if (months.includes(preferredMonth)) {
+    return preferredMonth;
+  }
+
+  const nextMonth = months.find((month) => month > preferredMonth);
+
+  return nextMonth ?? months[months.length - 1];
+}
+
+export function formatMonthKey(monthKey: string, pattern = "MMMM 'de' yyyy") {
+  const parsedMonth = parse(`${monthKey}-01`, "yyyy-MM-dd", new Date());
+
+  if (!isValid(parsedMonth)) {
+    return monthKey;
+  }
+
+  return format(parsedMonth, pattern, { locale: ptBR });
 }
 
 export function isTransactionInMonth(transaction: Pick<TransactionLike, "date">, monthKey: string) {

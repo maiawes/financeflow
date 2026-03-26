@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTransactions } from "@/hooks/useTransactions";
+import { Transaction, useTransactions } from "@/hooks/useTransactions";
 import { format, isBefore } from "date-fns";
 import { parseStoredDate } from "@/lib/date";
 
@@ -30,7 +30,7 @@ export function UpcomingBills() {
     })
     .slice(0, 5);
 
-  const getPriorityInfo = (bill: any) => {
+  const getPriorityInfo = (bill: Transaction) => {
     const dueDate = parseStoredDate(bill.date) ?? new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);

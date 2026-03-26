@@ -1,20 +1,25 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Landmark, PieChart } from "lucide-react";
+import { Plus, Landmark, PieChart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { EmprestimosList } from "@/components/emprestimos/EmprestimosList";
 import { useState } from "react";
 import { LoanDialog } from "@/components/forms/LoanDialog";
 import { useLoans } from "@/hooks/useLoans";
 import { useTransactions } from "@/hooks/useTransactions";
-import { format } from "date-fns";
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  getReferenceMonthFromTransactions,
+  isTransactionInMonth,
+} from "@/lib/transactions";
 
 export default function EmprestimosPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
-  const { loans } = useLoans();
-  const { transactions: incomes } = useTransactions("income");
+  const { loans, loading: loansLoading } = useLoans();
+  const { transactions: incomes, loading: incomesLoading } = useTransactions("income");
+  const loading = loansLoading || incomesLoading;
 
   const parcelasDoMes = loans.reduce((acc, loan) => {
     // Só conta se ainda tem parcelas a pagar
@@ -37,11 +42,20 @@ export default function EmprestimosPage() {
     : 0;
 
   // Calculo de Margem
-  const currentMonth = format(new Date(), "yyyy-MM");
-  const monthIncomes = incomes.filter(t => t.date.startsWith(currentMonth));
+  const referenceMonth = getReferenceMonthFromTransactions(incomes, getCurrentMonthKey());
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
+  const monthIncomes = incomes.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
   
   // Tenta encontrar a renda fixa (Salário ou Receita Fixa), se não houver, soma tudo
-  let basicaRenda = monthIncomes.filter(t => t.cat.toLowerCase().includes("salário") || t.cat.toLowerCase().includes("fixa")).reduce((acc, curr) => acc + curr.value, 0);
+  let basicaRenda = monthIncomes
+    .filter((transaction) => {
+      const category = transaction.cat.toLowerCase();
+      const description = transaction.desc.toLowerCase();
+
+      return category.includes("fix") || description.includes("salár") || description.includes("salario");
+    })
+    .reduce((acc, curr) => acc + curr.value, 0);
+
   if (basicaRenda === 0) {
     basicaRenda = monthIncomes.reduce((acc, curr) => acc + curr.value, 0);
   }
@@ -56,6 +70,7 @@ export default function EmprestimosPage() {
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Consignados</h2>
           <p className="text-muted-foreground mt-1">Acompanhe seus empréstimos e parcelamentos longos.</p>
+          <p className="text-xs text-muted-foreground mt-1">Renda base considerada: {referenceMonthLabel}.</p>
         </div>
         <div className="flex items-center space-x-2">
           <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => setIsNewOpen(true)}>
@@ -73,10 +88,10 @@ export default function EmprestimosPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">
-              R$ {parcelasDoMes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${parcelasDoMes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
             <p className="text-xs text-muted-foreground mt-1 text-rose-500 font-medium">
-              {percentRendaFixa.toFixed(1)}% da sua renda base
+              {loading ? "Calculando..." : `${percentRendaFixa.toFixed(1)}% da sua renda base`}
             </p>
           </CardContent>
         </Card>
@@ -88,7 +103,7 @@ export default function EmprestimosPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              R$ {marginAvailable.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${marginAvailable.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Baseado na margem de 30%
@@ -102,7 +117,7 @@ export default function EmprestimosPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              R$ {saldoDevedorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${saldoDevedorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
             <div className="w-full bg-muted rounded-full h-1.5 mt-3">
               <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${percentPaid}%` }}></div>

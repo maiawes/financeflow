@@ -7,23 +7,26 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
-import { useTransactions } from "@/hooks/useTransactions";
+import { Transaction, useTransactions } from "@/hooks/useTransactions";
 import { formatStoredDate } from "@/lib/date";
-import { format } from "date-fns";
-import { isTransactionInMonth } from "@/lib/transactions";
+import { formatMonthKey, isTransactionInMonth } from "@/lib/transactions";
 
-export function DespesasTable() {
+interface DespesasTableProps {
+  referenceMonth: string;
+}
+
+export function DespesasTable({ referenceMonth }: DespesasTableProps) {
   const { transactions, loading, deleteTransaction, updateTransaction } = useTransactions("expense");
-  const [editItem, setEditItem] = useState<any>(null);
-  const currentMonth = format(new Date(), "yyyy-MM");
-  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
+  const [editItem, setEditItem] = useState<Transaction | null>(null);
+  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
 
   if (loading) {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando despesas...</div>;
   }
 
   if (monthTransactions.length === 0) {
-    return <div className="p-8 text-center text-muted-foreground">Nenhuma despesa registrada. Adicione a sua primeira conta a pagar!</div>;
+    return <div className="p-8 text-center text-muted-foreground">Nenhuma despesa encontrada em {referenceMonthLabel}. Adicione a sua primeira conta a pagar!</div>;
   }
 
   return (

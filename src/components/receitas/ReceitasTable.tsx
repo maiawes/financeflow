@@ -7,19 +7,26 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
-import { useTransactions } from "@/hooks/useTransactions";
+import { Transaction, useTransactions } from "@/hooks/useTransactions";
 import { formatStoredDate } from "@/lib/date";
+import { formatMonthKey, isTransactionInMonth } from "@/lib/transactions";
 
-export function ReceitasTable() {
+interface ReceitasTableProps {
+  referenceMonth: string;
+}
+
+export function ReceitasTable({ referenceMonth }: ReceitasTableProps) {
   const { transactions, loading, deleteTransaction, updateTransaction } = useTransactions("income");
-  const [editItem, setEditItem] = useState<any>(null);
+  const [editItem, setEditItem] = useState<Transaction | null>(null);
+  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
 
   if (loading) {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando receitas...</div>;
   }
 
-  if (transactions.length === 0) {
-    return <div className="p-8 text-center text-muted-foreground">Nenhuma receita registrada. Adicione sua primeira!</div>;
+  if (monthTransactions.length === 0) {
+    return <div className="p-8 text-center text-muted-foreground">Nenhuma receita encontrada em {referenceMonthLabel}. Adicione sua primeira!</div>;
   }
 
   return (
@@ -36,7 +43,7 @@ export function ReceitasTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactions.map((rec) => (
+          {monthTransactions.map((rec) => (
             <TableRow key={rec.id} className="group hover:bg-muted/50 transition-colors">
               <TableCell className="font-medium text-foreground">{rec.desc}</TableCell>
               <TableCell>

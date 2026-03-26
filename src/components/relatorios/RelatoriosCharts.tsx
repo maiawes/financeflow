@@ -5,13 +5,21 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Ba
 import { useTransactions } from "@/hooks/useTransactions";
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { isTransactionInMonth } from "@/lib/transactions";
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  getReferenceMonthFromTransactions,
+  isTransactionInMonth,
+} from "@/lib/transactions";
+import { parseStoredDate } from "@/lib/date";
 
 export function RelatoriosCharts() {
   const { transactions: expenses } = useTransactions("expense");
   const { transactions: incomes } = useTransactions("income");
-  const currentMonth = format(new Date(), "yyyy-MM");
-  const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
+  const referenceMonth = getReferenceMonthFromTransactions([...expenses, ...incomes], getCurrentMonthKey());
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
+  const referenceMonthDate = parseStoredDate(`${referenceMonth}-01`) ?? new Date();
+  const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
 
   const grouped = currentMonthExpenses.reduce((acc, curr) => {
     acc[curr.cat] = (acc[curr.cat] || 0) + curr.value;
@@ -24,7 +32,7 @@ export function RelatoriosCharts() {
     : [{ name: "Nenhuma despesa", value: 1, color: "#cbd5e1" }];
 
   const months = Array.from({ length: 6 }).map((_, i) => {
-    const d = subMonths(new Date(), 5 - i);
+    const d = subMonths(referenceMonthDate, 5 - i);
     return {
       monthStr: format(d, "MMM", { locale: ptBR }),
       yearMonth: format(d, "yyyy-MM"),
@@ -48,7 +56,7 @@ export function RelatoriosCharts() {
       <Card className="shadow-sm border-border/50 bg-background/50">
         <CardHeader>
           <CardTitle>Despesas por Categoria</CardTitle>
-          <CardDescription>Onde o seu dinheiro foi gasto este mês.</CardDescription>
+          <CardDescription>Onde o seu dinheiro foi gasto em {referenceMonthLabel}.</CardDescription>
         </CardHeader>
         <CardContent className="h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -68,7 +76,7 @@ export function RelatoriosCharts() {
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: any) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, "Valor"]}
+                formatter={(value) => [`R$ ${Number(value ?? 0).toLocaleString("pt-BR")}`, "Valor"]}
                 contentStyle={{ borderRadius: "12px", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--background))", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
                 itemStyle={{ fontWeight: "600" }}
               />
@@ -81,7 +89,7 @@ export function RelatoriosCharts() {
       <Card className="shadow-sm border-border/50 bg-background/50">
         <CardHeader>
           <CardTitle>Evolução da Renda Extra</CardTitle>
-          <CardDescription>Histórico de bicos e extras da PM nos últimos 6 meses.</CardDescription>
+          <CardDescription>Histórico de bicos e extras da PM até {referenceMonthLabel}, nos últimos 6 meses.</CardDescription>
         </CardHeader>
         <CardContent className="h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -90,7 +98,7 @@ export function RelatoriosCharts() {
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `R$${(val/1000).toFixed(1)}k`} />
               <Tooltip
-                formatter={(value: any, name: any) => [`R$ ${Number(value).toLocaleString("pt-BR")}`, name === "bicos" ? "Bicos" : "Extra PM"]}
+                formatter={(value, name) => [`R$ ${Number(value ?? 0).toLocaleString("pt-BR")}`, name === "bicos" ? "Bicos" : "Extra PM"]}
                 contentStyle={{ borderRadius: "12px", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--background))", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
                 itemStyle={{ fontWeight: "600" }}
                 cursor={{ fill: "hsl(var(--muted)/0.4)" }}

@@ -1,29 +1,37 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Download, Filter } from "lucide-react";
+import { Plus, Download, Filter, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DespesasTable } from "@/components/despesas/DespesasTable";
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { useTransactions } from "@/hooks/useTransactions";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  getReferenceMonthFromTransactions,
+  isTransactionInMonth,
+} from "@/lib/transactions";
 
 export default function DespesasPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
-  const { transactions } = useTransactions("expense");
+  const { transactions, loading } = useTransactions("expense");
 
-  const currentMonth = format(new Date(), "yyyy-MM");
-  const monthTransactions = transactions.filter(t => t.date.startsWith(currentMonth));
+  const currentMonth = getCurrentMonthKey();
+  const referenceMonth = getReferenceMonthFromTransactions(transactions, currentMonth);
+  const currentMonthLabel = formatMonthKey(currentMonth);
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
+  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
+  const isShowingFallbackMonth = referenceMonth !== currentMonth;
 
   const totalPago = monthTransactions
-    .filter(t => t.status === "pago")
+    .filter((transaction) => transaction.status === "pago")
     .reduce((acc, curr) => acc + curr.value, 0);
 
   const aPagar = monthTransactions
-    .filter(t => t.status === "pendente")
+    .filter((transaction) => transaction.status === "pendente")
     .reduce((acc, curr) => acc + curr.value, 0);
 
   const previsaoTotal = totalPago + aPagar;
@@ -34,6 +42,11 @@ export default function DespesasPage() {
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Despesas</h2>
           <p className="text-muted-foreground mt-1">Gerencie suas contas e gastos.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {isShowingFallbackMonth
+              ? `Sem despesas em ${currentMonthLabel}. Exibindo ${referenceMonthLabel}, o mês mais próximo com lançamentos.`
+              : `Resumo de ${referenceMonthLabel}.`}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => toast.info("Filtro de contas em aprovação.")}>
@@ -58,7 +71,7 @@ export default function DespesasPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-rose-600 dark:text-rose-500">
-              R$ {totalPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${totalPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
           </CardContent>
         </Card>
@@ -68,7 +81,7 @@ export default function DespesasPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-muted-foreground">
-              R$ {aPagar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${aPagar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
           </CardContent>
         </Card>
@@ -78,7 +91,7 @@ export default function DespesasPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              R$ {previsaoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${previsaoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
           </CardContent>
         </Card>
@@ -86,10 +99,10 @@ export default function DespesasPage() {
 
       <Card className="shadow-sm border-border/50 overflow-hidden">
         <CardHeader className="px-6 py-4 border-b border-border/50 bg-muted/10">
-          <CardTitle>Histórico de Saídas</CardTitle>
+          <CardTitle>Saídas de {referenceMonthLabel}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <DespesasTable />
+          <DespesasTable referenceMonth={referenceMonth} />
         </CardContent>
       </Card>
 

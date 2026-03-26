@@ -68,8 +68,8 @@ export function LoanDialog({ open, onOpenChange, defaultValues }: LoanDialogProp
         toast.success("Empréstimo salvo com sucesso!");
       }
       onOpenChange(false);
-    } catch (e: any) {
-      toast.error("Erro ao salvar: " + e.message);
+    } catch (error) {
+      toast.error(`Erro ao salvar: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
     } finally {
       setLoading(false);
     }

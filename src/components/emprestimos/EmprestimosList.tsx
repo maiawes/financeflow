@@ -8,11 +8,11 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { LoanDialog } from "@/components/forms/LoanDialog";
-import { useLoans } from "@/hooks/useLoans";
+import { Loan, useLoans } from "@/hooks/useLoans";
 
 export function EmprestimosList() {
   const { loans, loading, deleteLoan, updateLoan } = useLoans();
-  const [editItem, setEditItem] = useState<any>(null);
+  const [editItem, setEditItem] = useState<Loan | null>(null);
 
   if (loading) {
     return <div className="col-span-1 md:col-span-2 lg:col-span-3 p-8 text-center text-muted-foreground animate-pulse">Carregando seus empréstimos ativos...</div>;

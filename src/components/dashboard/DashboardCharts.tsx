@@ -3,11 +3,20 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useTransactions } from "@/hooks/useTransactions";
-import { parseISO, format, subMonths, isAfter, startOfMonth } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  getReferenceMonthFromTransactions,
+} from "@/lib/transactions";
+import { parseStoredDate } from "@/lib/date";
 
 export function DashboardCharts() {
   const { transactions, loading } = useTransactions();
+  const referenceMonth = getReferenceMonthFromTransactions(transactions, getCurrentMonthKey());
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
+  const referenceMonthDate = parseStoredDate(`${referenceMonth}-01`) ?? new Date();
 
   if (loading) {
     return (
@@ -22,7 +31,7 @@ export function DashboardCharts() {
 
   // Pegar os últimos 6 meses
   const months = Array.from({ length: 6 }).map((_, i) => {
-    const d = subMonths(new Date(), 5 - i);
+    const d = subMonths(referenceMonthDate, 5 - i);
     return {
       monthStr: format(d, "MMM", { locale: ptBR }),
       yearMonth: format(d, "yyyy-MM"),
@@ -47,7 +56,7 @@ export function DashboardCharts() {
       <CardHeader>
         <CardTitle>Evolução Financeira</CardTitle>
         <CardDescription>
-          Suas receitas e despesas nos últimos 6 meses.
+          Suas receitas e despesas até {referenceMonthLabel}, nos últimos 6 meses.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 min-h-[300px]">
@@ -69,7 +78,7 @@ export function DashboardCharts() {
             <Tooltip 
               contentStyle={{ backgroundColor: "hsl(var(--background))", borderRadius: "8px", border: "1px solid hsl(var(--border))", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
               itemStyle={{ fontSize: "14px", fontWeight: "500" }}
-              formatter={(value: any) => [`R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]}
+              formatter={(value) => [`R$ ${Number(value ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]}
             />
             <Area type="monotone" dataKey="receitas" name="Receitas" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorReceitas)" />
             <Area type="monotone" dataKey="despesas" name="Despesas" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorDespesas)" />

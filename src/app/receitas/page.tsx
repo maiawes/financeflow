@@ -8,15 +8,23 @@ import { ReceitasTable } from "@/components/receitas/ReceitasTable";
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { useTransactions } from "@/hooks/useTransactions";
-import { format } from "date-fns";
-import { isTransactionInMonth } from "@/lib/transactions";
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  getReferenceMonthFromTransactions,
+  isTransactionInMonth,
+} from "@/lib/transactions";
 
 export default function ReceitasPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
   const { transactions, loading } = useTransactions("income");
 
-  const currentMonth = format(new Date(), "yyyy-MM");
-  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
+  const currentMonth = getCurrentMonthKey();
+  const referenceMonth = getReferenceMonthFromTransactions(transactions, currentMonth);
+  const currentMonthLabel = formatMonthKey(currentMonth);
+  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
+  const referenceMonthLabel = formatMonthKey(referenceMonth);
+  const isShowingFallbackMonth = referenceMonth !== currentMonth;
 
   const totalRecebido = monthTransactions
     .filter((transaction) => transaction.status === "recebido")
@@ -34,6 +42,11 @@ export default function ReceitasPage() {
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Receitas</h2>
           <p className="text-muted-foreground mt-1">Gerencie suas entradas de dinheiro.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {isShowingFallbackMonth
+              ? `Sem receitas em ${currentMonthLabel}. Exibindo ${referenceMonthLabel}, o mês mais próximo com lançamentos.`
+              : `Resumo de ${referenceMonthLabel}.`}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => toast.info("Filtro em desenvolvimento!")}>
@@ -86,10 +99,10 @@ export default function ReceitasPage() {
 
       <Card className="shadow-sm border-border/50 overflow-hidden">
         <CardHeader className="px-6 py-4 border-b border-border/50 bg-muted/10">
-          <CardTitle>Histórico de Entradas</CardTitle>
+          <CardTitle>Entradas de {referenceMonthLabel}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <ReceitasTable />
+          <ReceitasTable referenceMonth={referenceMonth} />
         </CardContent>
       </Card>
 
