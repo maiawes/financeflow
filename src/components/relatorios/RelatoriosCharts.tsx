@@ -3,25 +3,29 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
-const despesasData = [
-  { name: "Moradia", value: 1800, color: "#f43f5e" },
-  { name: "Alimentação", value: 950, color: "#f97316" },
-  { name: "Transporte", value: 650, color: "#eab308" },
-  { name: "Lazer", value: 400, color: "#3b82f6" },
-  { name: "Saúde", value: 500, color: "#10b981" },
-  { name: "Empréstimos", value: 350, color: "#8b5cf6" },
-];
-
-const evolucaoRendaExtra = [
-  { month: "Out", bicos: 800, pm: 400 },
-  { month: "Nov", bicos: 1200, pm: 700 },
-  { month: "Dez", bicos: 2500, pm: 1050 },
-  { month: "Jan", bicos: 900, pm: 350 },
-  { month: "Fev", bicos: 1100, pm: 700 },
-  { month: "Mar", bicos: 1550, pm: 1050 },
-];
+import { useTransactions } from "@/hooks/useTransactions";
 
 export function RelatoriosCharts() {
+  const { transactions: expenses } = useTransactions("expense");
+  const { transactions: incomes } = useTransactions("income");
+
+  const grouped = expenses.reduce((acc, curr) => {
+    acc[curr.cat] = (acc[curr.cat] || 0) + curr.value;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const colors = ["#f43f5e", "#f97316", "#eab308", "#3b82f6", "#10b981", "#8b5cf6", "#14b8a6", "#ec4899"];
+  const despesasData = Object.keys(grouped).length > 0 
+    ? Object.entries(grouped).map(([name, value], i) => ({ name, value, color: colors[i % colors.length] }))
+    : [{ name: "Nenhuma despesa", value: 1, color: "#cbd5e1" }];
+
+  const pmIncomes = incomes.filter(i => i.cat.toLowerCase().includes("pm")).reduce((acc, curr) => acc + curr.value, 0);
+  const bicoIncomes = incomes.filter(i => i.cat.toLowerCase().includes("bico")).reduce((acc, curr) => acc + curr.value, 0);
+  
+  const evolucaoRendaExtra = [
+    { month: "Atual", bicos: bicoIncomes, pm: pmIncomes }
+  ];
+
   return (
     <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
       <Card className="shadow-sm border-border/50 bg-background/50">

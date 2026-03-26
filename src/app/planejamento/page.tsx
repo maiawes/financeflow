@@ -5,8 +5,19 @@ import { Target, TrendingUp, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { SimuladorCenarios } from "@/components/planejamento/SimuladorCenarios";
+import { useTransactions } from "@/hooks/useTransactions";
+import { Loader2 } from "lucide-react";
 
 export default function PlanejamentoPage() {
+  const { transactions: incomes, loading: loading1 } = useTransactions("income");
+  const { transactions: expenses, loading: loading2 } = useTransactions("expense");
+
+  const totalIncome = incomes.reduce((acc, curr) => acc + curr.value, 0);
+  const totalExpense = expenses.reduce((acc, curr) => acc + curr.value, 0);
+  const balance = totalIncome - totalExpense;
+  const loading = loading1 || loading2;
+  const freePercentage = totalIncome > 0 ? Math.max(0, (balance / totalIncome) * 100) : 0;
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 md:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
@@ -28,7 +39,9 @@ export default function PlanejamentoPage() {
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">R$ 8.900,00</div>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${totalIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+            </div>
           </CardContent>
         </Card>
         
@@ -38,7 +51,9 @@ export default function PlanejamentoPage() {
             <Target className="h-4 w-4 text-rose-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-rose-600 dark:text-rose-500">R$ 4.650,00</div>
+            <div className="text-2xl font-bold text-rose-600 dark:text-rose-500">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${totalExpense.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+            </div>
           </CardContent>
         </Card>
         
@@ -47,12 +62,14 @@ export default function PlanejamentoPage() {
             <CardTitle className="text-sm font-medium">Saldo Livre Previsto</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">R$ 4.250,00</div>
-            <div className="text-xs text-muted-foreground mt-2">
-              Você ainda tem 47% da sua renda livre para este mês.
+            <div className="text-2xl font-bold text-primary">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             </div>
-            <div className="w-full bg-muted rounded-full h-1.5 mt-2">
-              <div className="bg-primary h-1.5 rounded-full" style={{ width: "47%" }}></div>
+            <div className="text-xs text-muted-foreground mt-2">
+              {loading ? "Calculando..." : `Você ainda tem ${freePercentage.toFixed(0)}% da sua renda livre para este mês.`}
+            </div>
+            <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
+              <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${freePercentage}%` }}></div>
             </div>
           </CardContent>
         </Card>
@@ -62,7 +79,7 @@ export default function PlanejamentoPage() {
         <div>
           <h3 className="text-xl font-semibold tracking-tight mb-4">Simulador de Cenários</h3>
           <p className="text-sm text-muted-foreground mb-6">Mova os controles para ver como sua renda e despesas seriam afetadas por decisões extras este mês.</p>
-          <SimuladorCenarios />
+          <SimuladorCenarios baseIncome={totalIncome} baseExpense={totalExpense} />
         </div>
         
         <div>
@@ -77,7 +94,7 @@ export default function PlanejamentoPage() {
                 <div>
                   <h4 className="font-semibold text-amber-600 dark:text-amber-500 text-base">Alto comprometimento</h4>
                   <p className="text-sm text-amber-600/80 dark:text-amber-500/80 mt-1">
-                    Você já comprometeu mais de 50% da sua renda antes mesmo de receber todo o seu salário. Tente reduzir gastos variáveis nos próximos dias.
+                    {loading ? "Analisando..." : `Você já comprometeu ${(totalIncome > 0 ? (totalExpense / totalIncome) * 100 : 0).toFixed(0)}% da sua renda antes mesmo de receber todo o seu salário. Tente reduzir gastos variáveis nos próximos dias.`}
                   </p>
                 </div>
               </CardContent>

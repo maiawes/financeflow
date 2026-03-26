@@ -5,9 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 
-export function SimuladorCenarios() {
-  const baseIncome = 8900;
-  const baseExpense = 4650;
+export function SimuladorCenarios({ baseIncome = 0, baseExpense = 0 }: { baseIncome?: number; baseExpense?: number }) {
   
   const [extrasPM, setExtrasPM] = useState(0); // 0 a 10, cada = R$ 350
   const [quitarEmprestimo, setQuitarEmprestimo] = useState(false); // remove R$ 250 de parcela, custa 3000
