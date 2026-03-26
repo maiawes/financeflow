@@ -1,15 +1,32 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Download, Filter } from "lucide-react";
+import { Plus, Download, Filter, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ReceitasTable } from "@/components/receitas/ReceitasTable";
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
+import { useTransactions } from "@/hooks/useTransactions";
+import { format } from "date-fns";
+import { isTransactionInMonth } from "@/lib/transactions";
 
 export default function ReceitasPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const { transactions, loading } = useTransactions("income");
+
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
+
+  const totalRecebido = monthTransactions
+    .filter((transaction) => transaction.status === "recebido")
+    .reduce((acc, curr) => acc + curr.value, 0);
+
+  const aReceber = monthTransactions
+    .filter((transaction) => transaction.status === "pendente")
+    .reduce((acc, curr) => acc + curr.value, 0);
+
+  const previsaoTotal = totalRecebido + aReceber;
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 md:pb-8">
@@ -40,7 +57,9 @@ export default function ReceitasPage() {
             <CardTitle className="text-sm font-medium">Total Recebido (Mês)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">R$ 5.400,00</div>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${totalRecebido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -48,7 +67,9 @@ export default function ReceitasPage() {
             <CardTitle className="text-sm font-medium">A Receber (Mês)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-muted-foreground">R$ 3.500,00</div>
+            <div className="text-2xl font-bold text-muted-foreground">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${aReceber.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -56,7 +77,9 @@ export default function ReceitasPage() {
             <CardTitle className="text-sm font-medium">Previsão Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 8.900,00</div>
+            <div className="text-2xl font-bold">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `R$ ${previsaoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+            </div>
           </CardContent>
         </Card>
       </div>
