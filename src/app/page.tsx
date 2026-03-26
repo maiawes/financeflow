@@ -34,11 +34,10 @@ export default function DashboardPage() {
   const totalIncome = currentMonthIncomes.reduce((acc, curr) => acc + curr.value, 0);
   const totalExpense = currentMonthExpenses.reduce((acc, curr) => acc + curr.value, 0);
   const totalLoans = loans.reduce((acc, curr) => acc + curr.installmentValue, 0);
-  const balance = totalIncome - totalExpense - totalLoans;
+  const balance = totalIncome - totalExpense;
   const previousBalance =
     previousMonthIncomes.reduce((acc, curr) => acc + curr.value, 0) -
-    previousMonthExpenses.reduce((acc, curr) => acc + curr.value, 0) -
-    totalLoans;
+    previousMonthExpenses.reduce((acc, curr) => acc + curr.value, 0);
   const balanceDelta = balance - previousBalance;
   const hasBalanceComparison = previousBalance !== 0;
   const balanceDeltaLabel =
@@ -79,6 +78,9 @@ export default function DashboardPage() {
                 {!hasBalanceComparison ? "Comparativo" : balanceDelta >= 0 ? "Alta" : "Queda"}
               </span>
               {loading ? "Calculando variação..." : balanceDeltaLabel}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Considera apenas receitas e despesas previstas do mês.
             </p>
           </CardContent>
         </Card>
