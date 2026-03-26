@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { useTransactions } from "@/hooks/useTransactions";
+import { formatStoredDate } from "@/lib/date";
 
 export function DespesasTable() {
   const { transactions, loading, deleteTransaction, updateTransaction } = useTransactions("expense");
@@ -46,7 +47,7 @@ export function DespesasTable() {
               <TableCell className="font-semibold text-rose-600 dark:text-rose-500">
                 - R$ {item.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">{item.date}</TableCell>
+              <TableCell className="hidden md:table-cell text-muted-foreground">{formatStoredDate(item.date) || "S/ data"}</TableCell>
               <TableCell>
                 <Badge 
                   variant={item.status === "pago" ? "default" : "outline"} 

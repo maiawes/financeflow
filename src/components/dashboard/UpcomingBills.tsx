@@ -2,7 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
-import { format, isBefore, parseISO } from "date-fns";
+import { format, isBefore } from "date-fns";
+import { parseStoredDate } from "@/lib/date";
 
 export function UpcomingBills() {
   const { transactions, loading } = useTransactions("expense");
@@ -20,17 +21,17 @@ export function UpcomingBills() {
 
   // Filtrar apenas pendentes e ordenar pelas mais próximas (para não lotar o card)
   const pendingBills = transactions
-    .filter(t => t.status === "pendente")
+    .filter(t => t.status === "pendente" && !!parseStoredDate(t.date))
     // Ordenar data crescente (mais próximo de vencer primeiro)
     .sort((a, b) => {
-      const dateA = a.date ? new Date(a.date).getTime() : 0;
-      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      const dateA = parseStoredDate(a.date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const dateB = parseStoredDate(b.date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
       return dateA - dateB;
     })
     .slice(0, 5);
 
   const getPriorityInfo = (bill: any) => {
-    const dueDate = bill.date ? new Date(bill.date + "T00:00:00") : new Date();
+    const dueDate = parseStoredDate(bill.date) ?? new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -64,6 +65,12 @@ export function UpcomingBills() {
              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma conta pendente.</p>
           ) : (
             pendingBills.map((bill) => {
+              const dueDate = parseStoredDate(bill.date);
+
+              if (!dueDate) {
+                return null;
+              }
+
               const { colors, Icon, label } = getPriorityInfo(bill);
               return (
                 <div key={bill.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/50 transition-colors">
@@ -73,7 +80,7 @@ export function UpcomingBills() {
                     </div>
                     <div>
                       <p className="text-sm font-medium leading-none">{bill.desc}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{label} ({format(parseISO(bill.date), 'dd/MM')})</p>
+                      <p className="text-xs text-muted-foreground mt-1">{label} ({format(dueDate, "dd/MM")})</p>
                     </div>
                   </div>
                   <div className="text-right">

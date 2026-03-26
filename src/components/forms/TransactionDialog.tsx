@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Transaction } from "@/hooks/useTransactions";
+import { normalizeStoredDate } from "@/lib/date";
 
 interface TransactionDialogProps {
   open: boolean;
@@ -56,13 +57,19 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
   }, [open, defaultValues, isIncome]);
 
   const handleSave = async () => {
-    if (!desc || !value) {
-      toast.error("Preencha descrição e valor.");
+    if (!desc || !value || !date) {
+      toast.error("Preencha descrição, valor e data.");
       return;
     }
     
+    const storedDate = normalizeStoredDate(date);
+
+    if (!storedDate) {
+      toast.error("Use uma data válida.");
+      return;
+    }
+
     setLoading(true);
-    const storedDate = date.includes("-") ? `${date.split("-")[2]}/${date.split("-")[1]}/${date.split("-")[0]}` : date;
     
     const data = {
       desc,

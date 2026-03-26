@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { normalizeStoredDate, parseStoredDate } from "@/lib/date";
 
 export interface Transaction {
   id: string;
@@ -21,16 +22,33 @@ export function useTransactions(type?: "income" | "expense") {
     const q = query(collection(db, "transactions"));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      let docs = snapshot.docs.map(doc => {
+        const data = doc.data() as Transaction;
+
+        return {
+          ...data,
+          id: doc.id,
+          date: normalizeStoredDate(data.date),
+        } as Transaction;
+      });
       
       if (type) {
         docs = docs.filter(d => d.type === type);
       }
       
       // Ordenação local para não depender de índices complexos no Firestore agora
-      docs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      docs.sort((a, b) => {
+        const dateA = parseStoredDate(a.date)?.getTime() ?? 0;
+        const dateB = parseStoredDate(b.date)?.getTime() ?? 0;
+
+        return dateB - dateA;
+      });
       
       setTransactions(docs);
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao carregar transações:", error);
+      setTransactions([]);
       setLoading(false);
     });
 

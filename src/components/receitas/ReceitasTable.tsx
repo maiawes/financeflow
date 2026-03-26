@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { useTransactions } from "@/hooks/useTransactions";
+import { formatStoredDate } from "@/lib/date";
 
 export function ReceitasTable() {
   const { transactions, loading, deleteTransaction, updateTransaction } = useTransactions("income");
@@ -46,7 +47,7 @@ export function ReceitasTable() {
               <TableCell className="font-semibold text-emerald-600 dark:text-emerald-500">
                 + R$ {rec.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">{rec.date}</TableCell>
+              <TableCell className="hidden md:table-cell text-muted-foreground">{formatStoredDate(rec.date) || "S/ data"}</TableCell>
               <TableCell>
                 <Badge 
                   variant={rec.status === "recebido" ? "default" : "outline"} 
