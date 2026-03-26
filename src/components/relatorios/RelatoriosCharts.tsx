@@ -5,12 +5,15 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Ba
 import { useTransactions } from "@/hooks/useTransactions";
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { isTransactionInMonth } from "@/lib/transactions";
 
 export function RelatoriosCharts() {
   const { transactions: expenses } = useTransactions("expense");
   const { transactions: incomes } = useTransactions("income");
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
 
-  const grouped = expenses.reduce((acc, curr) => {
+  const grouped = currentMonthExpenses.reduce((acc, curr) => {
     acc[curr.cat] = (acc[curr.cat] || 0) + curr.value;
     return acc;
   }, {} as Record<string, number>);

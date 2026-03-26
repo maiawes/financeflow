@@ -7,13 +7,18 @@ import { toast } from "sonner";
 import { SimuladorCenarios } from "@/components/planejamento/SimuladorCenarios";
 import { useTransactions } from "@/hooks/useTransactions";
 import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { isTransactionInMonth } from "@/lib/transactions";
 
 export default function PlanejamentoPage() {
   const { transactions: incomes, loading: loading1 } = useTransactions("income");
   const { transactions: expenses, loading: loading2 } = useTransactions("expense");
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const currentMonthIncomes = incomes.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
+  const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
 
-  const totalIncome = incomes.reduce((acc, curr) => acc + curr.value, 0);
-  const totalExpense = expenses.reduce((acc, curr) => acc + curr.value, 0);
+  const totalIncome = currentMonthIncomes.reduce((acc, curr) => acc + curr.value, 0);
+  const totalExpense = currentMonthExpenses.reduce((acc, curr) => acc + curr.value, 0);
   const balance = totalIncome - totalExpense;
   const loading = loading1 || loading2;
   const freePercentage = totalIncome > 0 ? Math.max(0, (balance / totalIncome) * 100) : 0;

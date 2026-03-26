@@ -7,14 +7,19 @@ import { UpcomingBills } from "@/components/dashboard/UpcomingBills";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useLoans } from "@/hooks/useLoans";
+import { format } from "date-fns";
+import { isTransactionInMonth } from "@/lib/transactions";
 
 export default function DashboardPage() {
   const { transactions: incomes, loading: loading1 } = useTransactions("income");
   const { transactions: expenses, loading: loading2 } = useTransactions("expense");
   const { loans, loading: loading3 } = useLoans();
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const currentMonthIncomes = incomes.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
+  const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
 
-  const totalIncome = incomes.reduce((acc, curr) => acc + curr.value, 0);
-  const totalExpense = expenses.reduce((acc, curr) => acc + curr.value, 0);
+  const totalIncome = currentMonthIncomes.reduce((acc, curr) => acc + curr.value, 0);
+  const totalExpense = currentMonthExpenses.reduce((acc, curr) => acc + curr.value, 0);
   const totalLoans = loans.reduce((acc, curr) => acc + curr.installmentValue, 0);
   const balance = totalIncome - totalExpense - totalLoans;
   

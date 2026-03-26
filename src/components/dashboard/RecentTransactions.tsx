@@ -2,11 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isAfter } from "date-fns";
+import { formatStoredDate, parseStoredDate } from "@/lib/date";
 
 export function RecentTransactions() {
   const { transactions, loading } = useTransactions();
+  const today = new Date();
 
   if (loading) {
     return (
@@ -20,7 +21,12 @@ export function RecentTransactions() {
   }
 
   // Pegar as 5 transações mais recentes
-  const recentTxs = transactions.slice(0, 5);
+  const recentTxs = transactions
+    .filter((transaction) => {
+      const transactionDate = parseStoredDate(transaction.date);
+      return transactionDate ? !isAfter(transactionDate, today) : true;
+    })
+    .slice(0, 5);
 
   return (
     <Card className="shadow-sm border-border/50">
@@ -46,7 +52,7 @@ export function RecentTransactions() {
                   </div>
                   <div>
                     <p className="text-sm font-medium leading-none">{tx.desc}</p>
-                    <p className="text-xs text-muted-foreground mt-1.5">{tx.cat} • {tx.date ? format(parseISO(tx.date), "dd MMM yyyy", { locale: ptBR }) : 'S/ data'}</p>
+                    <p className="text-xs text-muted-foreground mt-1.5">{tx.cat} • {tx.date ? formatStoredDate(tx.date, "dd MMM yyyy") : 'S/ data'}</p>
                   </div>
                 </div>
                 <div className={cn(

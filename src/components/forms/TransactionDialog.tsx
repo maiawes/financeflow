@@ -7,10 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Transaction } from "@/hooks/useTransactions";
 import { normalizeStoredDate } from "@/lib/date";
+import { useTransactions } from "@/hooks/useTransactions";
 
 interface TransactionDialogProps {
   open: boolean;
@@ -22,6 +21,7 @@ interface TransactionDialogProps {
 export function TransactionDialog({ open, onOpenChange, type, defaultValues }: TransactionDialogProps) {
   const isEdit = !!defaultValues;
   const isIncome = type === "income";
+  const { addTransaction, updateTransaction } = useTransactions(type);
 
   const [desc, setDesc] = useState("");
   const [value, setValue] = useState("");
@@ -82,10 +82,10 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
 
     try {
       if (isEdit && defaultValues?.id) {
-        await updateDoc(doc(db, "transactions", defaultValues.id), data);
+        await updateTransaction(defaultValues.id, data);
         toast.success(`${isIncome ? "Receita" : "Despesa"} atualizada!`);
       } else {
-        await addDoc(collection(db, "transactions"), { ...data, createdAt: new Date().toISOString() });
+        await addTransaction(data);
         toast.success(`${isIncome ? "Receita" : "Despesa"} criada!`);
       }
       onOpenChange(false);

@@ -9,16 +9,20 @@ import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { useTransactions } from "@/hooks/useTransactions";
 import { formatStoredDate } from "@/lib/date";
+import { format } from "date-fns";
+import { isTransactionInMonth } from "@/lib/transactions";
 
 export function DespesasTable() {
   const { transactions, loading, deleteTransaction, updateTransaction } = useTransactions("expense");
   const [editItem, setEditItem] = useState<any>(null);
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, currentMonth));
 
   if (loading) {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando despesas...</div>;
   }
 
-  if (transactions.length === 0) {
+  if (monthTransactions.length === 0) {
     return <div className="p-8 text-center text-muted-foreground">Nenhuma despesa registrada. Adicione a sua primeira conta a pagar!</div>;
   }
 
@@ -36,7 +40,7 @@ export function DespesasTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactions.map((item) => (
+          {monthTransactions.map((item) => (
             <TableRow key={item.id} className="group hover:bg-muted/50 transition-colors">
               <TableCell className="font-medium text-foreground">{item.desc}</TableCell>
               <TableCell>
