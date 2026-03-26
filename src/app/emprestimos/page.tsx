@@ -7,9 +7,48 @@ import { toast } from "sonner";
 import { EmprestimosList } from "@/components/emprestimos/EmprestimosList";
 import { useState } from "react";
 import { LoanDialog } from "@/components/forms/LoanDialog";
+import { useLoans } from "@/hooks/useLoans";
+import { useTransactions } from "@/hooks/useTransactions";
+import { format } from "date-fns";
 
 export default function EmprestimosPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const { loans } = useLoans();
+  const { transactions: incomes } = useTransactions("income");
+
+  const parcelasDoMes = loans.reduce((acc, loan) => {
+    // Só conta se ainda tem parcelas a pagar
+    if (loan.paidInstallments < loan.totalInstallments) {
+      return acc + loan.installmentValue;
+    }
+    return acc;
+  }, 0);
+
+  const saldoDevedorTotal = loans.reduce((acc, loan) => {
+    return acc + ((loan.totalInstallments - loan.paidInstallments) * loan.installmentValue);
+  }, 0);
+
+  const totalBorrowed = loans.reduce((acc, loan) => {
+    return acc + (loan.totalInstallments * loan.installmentValue);
+  }, 0);
+
+  const percentPaid = totalBorrowed > 0 
+    ? ((totalBorrowed - saldoDevedorTotal) / totalBorrowed) * 100 
+    : 0;
+
+  // Calculo de Margem
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const monthIncomes = incomes.filter(t => t.date.startsWith(currentMonth));
+  
+  // Tenta encontrar a renda fixa (Salário ou Receita Fixa), se não houver, soma tudo
+  let basicaRenda = monthIncomes.filter(t => t.cat.toLowerCase().includes("salário") || t.cat.toLowerCase().includes("fixa")).reduce((acc, curr) => acc + curr.value, 0);
+  if (basicaRenda === 0) {
+    basicaRenda = monthIncomes.reduce((acc, curr) => acc + curr.value, 0);
+  }
+  
+  const marginLimit = basicaRenda * 0.3; // 30%
+  const marginAvailable = Math.max(0, marginLimit - parcelasDoMes);
+  const percentRendaFixa = basicaRenda > 0 ? (parcelasDoMes / basicaRenda) * 100 : 0;
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 md:pb-8">
@@ -33,9 +72,11 @@ export default function EmprestimosPage() {
             <Landmark className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">R$ 1.250,00</div>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">
+              R$ {parcelasDoMes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
             <p className="text-xs text-muted-foreground mt-1 text-rose-500 font-medium">
-              14% da sua renda fixa
+              {percentRendaFixa.toFixed(1)}% da sua renda base
             </p>
           </CardContent>
         </Card>
@@ -46,7 +87,9 @@ export default function EmprestimosPage() {
             <PieChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 450,00</div>
+            <div className="text-2xl font-bold">
+              R$ {marginAvailable.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               Baseado na margem de 30%
             </p>
@@ -58,12 +101,14 @@ export default function EmprestimosPage() {
             <CardTitle className="text-sm font-medium">Saldo Devedor Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 45.300,00</div>
+            <div className="text-2xl font-bold">
+              R$ {saldoDevedorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
             <div className="w-full bg-muted rounded-full h-1.5 mt-3">
-              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: "35%" }}></div>
+              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${percentPaid}%` }}></div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              35% já pago de todos os contratos vigentes
+              {percentPaid.toFixed(1)}% já pago de todos os contratos vigentes
             </p>
           </CardContent>
         </Card>

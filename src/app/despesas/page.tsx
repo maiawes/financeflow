@@ -7,9 +7,26 @@ import { toast } from "sonner";
 import { DespesasTable } from "@/components/despesas/DespesasTable";
 import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
+import { useTransactions } from "@/hooks/useTransactions";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function DespesasPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const { transactions } = useTransactions("expense");
+
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const monthTransactions = transactions.filter(t => t.date.startsWith(currentMonth));
+
+  const totalPago = monthTransactions
+    .filter(t => t.status === "pago")
+    .reduce((acc, curr) => acc + curr.value, 0);
+
+  const aPagar = monthTransactions
+    .filter(t => t.status === "pendente")
+    .reduce((acc, curr) => acc + curr.value, 0);
+
+  const previsaoTotal = totalPago + aPagar;
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 md:pb-8">
@@ -40,7 +57,9 @@ export default function DespesasPage() {
             <CardTitle className="text-sm font-medium">Total Pago (Mês)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-rose-600 dark:text-rose-500">R$ 2.400,00</div>
+            <div className="text-2xl font-bold text-rose-600 dark:text-rose-500">
+              R$ {totalPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -48,7 +67,9 @@ export default function DespesasPage() {
             <CardTitle className="text-sm font-medium">A Pagar (Mês)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-muted-foreground">R$ 2.250,00</div>
+            <div className="text-2xl font-bold text-muted-foreground">
+              R$ {aPagar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -56,7 +77,9 @@ export default function DespesasPage() {
             <CardTitle className="text-sm font-medium">Previsão Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 4.650,00</div>
+            <div className="text-2xl font-bold">
+              R$ {previsaoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
           </CardContent>
         </Card>
       </div>
