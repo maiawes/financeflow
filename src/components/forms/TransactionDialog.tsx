@@ -28,7 +28,11 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
   const [cat, setCat] = useState("outro");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [status, setStatus] = useState(isIncome ? "recebido" : "pago");
+  const [paymentMode, setPaymentMode] = useState<"single" | "installment">("single");
+  const [installmentCount, setInstallmentCount] = useState("2");
   const [loading, setLoading] = useState(false);
+  const isExpenseInstallment = !isIncome && paymentMode === "installment";
+  const isEditingInstallment = !isIncome && (defaultValues?.installmentTotal ?? 0) > 1;
 
   useEffect(() => {
     if (open) {
@@ -46,12 +50,16 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
         }
         
         setStatus(defaultValues.status || (isIncome ? "recebido" : "pago"));
+        setPaymentMode(defaultValues.installmentTotal && defaultValues.installmentTotal > 1 ? "installment" : "single");
+        setInstallmentCount(defaultValues.installmentTotal ? String(defaultValues.installmentTotal) : "2");
       } else {
         setDesc("");
         setValue("");
         setCat("outro");
         setDate(new Date().toISOString().split("T")[0]);
         setStatus(isIncome ? "recebido" : "pago");
+        setPaymentMode("single");
+        setInstallmentCount("2");
       }
     }
   }, [open, defaultValues, isIncome]);
@@ -66,6 +74,13 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
 
     if (!storedDate) {
       toast.error("Use uma data válida.");
+      return;
+    }
+
+    const parsedInstallmentCount = isExpenseInstallment ? Number(installmentCount) : 1;
+
+    if (isExpenseInstallment && (!Number.isInteger(parsedInstallmentCount) || parsedInstallmentCount < 2)) {
+      toast.error("Informe uma quantidade de parcelas maior que 1.");
       return;
     }
 
@@ -85,8 +100,12 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
         await updateTransaction(defaultValues.id, data);
         toast.success(`${isIncome ? "Receita" : "Despesa"} atualizada!`);
       } else {
-        await addTransaction(data);
-        toast.success(`${isIncome ? "Receita" : "Despesa"} criada!`);
+        await addTransaction(data, { installmentCount: parsedInstallmentCount });
+        toast.success(
+          isExpenseInstallment
+            ? `${parsedInstallmentCount} parcelas criadas com sucesso!`
+            : `${isIncome ? "Receita" : "Despesa"} criada!`,
+        );
       }
       onOpenChange(false);
     } catch (error) {
@@ -109,14 +128,44 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="value">Valor (R$)</Label>
-              <Input id="value" type="number" placeholder="250.00" value={value} onChange={(e) => setValue(e.target.value)} />
+              <Label htmlFor="value">{isExpenseInstallment ? "Valor da Parcela (R$)" : "Valor (R$)"}</Label>
+              <Input id="value" type="number" placeholder={isExpenseInstallment ? "125.00" : "250.00"} value={value} onChange={(e) => setValue(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="date">Data</Label>
               <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
           </div>
+          {!isIncome ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="payment-mode">Lançamento</Label>
+                <Select
+                  value={paymentMode}
+                  onValueChange={(val) => setPaymentMode(val === "installment" ? "installment" : "single")}
+                  disabled={isEdit}
+                >
+                  <SelectTrigger id="payment-mode"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">À vista</SelectItem>
+                    <SelectItem value="installment">Parcelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="installment-count">Qtd. Parcelas</Label>
+                <Input
+                  id="installment-count"
+                  type="number"
+                  min="2"
+                  placeholder="Ex: 10"
+                  value={isExpenseInstallment ? installmentCount : ""}
+                  onChange={(e) => setInstallmentCount(e.target.value)}
+                  disabled={!isExpenseInstallment || isEdit}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="cat">Categoria</Label>
@@ -154,6 +203,16 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
               </Select>
             </div>
           </div>
+          {!isIncome && !isEdit && isExpenseInstallment ? (
+            <p className="text-xs text-muted-foreground">
+              O valor informado sera usado como valor de cada parcela, e as proximas parcelas serao lancadas automaticamente nos meses seguintes.
+            </p>
+          ) : null}
+          {!isIncome && isEdit && isEditingInstallment ? (
+            <p className="text-xs text-muted-foreground">
+              Esta edicao altera somente esta parcela do lancamento.
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>

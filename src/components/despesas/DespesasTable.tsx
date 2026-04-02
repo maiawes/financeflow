@@ -9,7 +9,7 @@ import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { Transaction, useTransactions } from "@/hooks/useTransactions";
 import { formatStoredDate } from "@/lib/date";
-import { formatMonthKey, isTransactionInMonth } from "@/lib/transactions";
+import { formatMonthKey, formatTransactionDescription, isTransactionInMonth } from "@/lib/transactions";
 
 interface DespesasTableProps {
   referenceMonth: string;
@@ -45,7 +45,7 @@ export function DespesasTable({ referenceMonth }: DespesasTableProps) {
         <TableBody>
           {monthTransactions.map((item) => (
             <TableRow key={item.id} className="group hover:bg-muted/50 transition-colors">
-              <TableCell className="font-medium text-foreground">{item.desc}</TableCell>
+              <TableCell className="font-medium text-foreground">{formatTransactionDescription(item)}</TableCell>
               <TableCell>
                 <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground font-normal">
                   {item.cat}

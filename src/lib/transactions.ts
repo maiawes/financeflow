@@ -24,6 +24,9 @@ export interface TransactionLike {
   sourceId?: string;
   occurrenceMonth?: string;
   isRecurring?: boolean;
+  installmentGroupId?: string;
+  installmentNumber?: number;
+  installmentTotal?: number;
 }
 
 export function getTransactionMonth(date?: string | null) {
@@ -79,6 +82,25 @@ export function isTransactionInMonth(transaction: Pick<TransactionLike, "date">,
   return getTransactionMonth(transaction.date) === monthKey;
 }
 
+export function formatTransactionDescription<
+  T extends Pick<TransactionLike, "type"> & {
+    desc: string;
+    installmentNumber?: number;
+    installmentTotal?: number;
+  },
+>(transaction: T) {
+  if (
+    transaction.type === "expense" &&
+    transaction.installmentTotal &&
+    transaction.installmentTotal > 1 &&
+    transaction.installmentNumber
+  ) {
+    return `${transaction.desc} (${transaction.installmentNumber}/${transaction.installmentTotal})`;
+  }
+
+  return transaction.desc;
+}
+
 export function formatRecurringTransactionId(sourceId: string, monthKey: string) {
   return `${sourceId}${RECURRING_ID_SEPARATOR}${monthKey}`;
 }
@@ -113,7 +135,7 @@ export function expandRecurringExpenses<T extends TransactionLike>(
   const rangeEnd = startOfMonth(addMonths(baseDate, futureMonths));
 
   return transactions.flatMap((transaction) => {
-    if (transaction.type !== "expense") {
+    if (transaction.type !== "expense" || transaction.isRecurring !== true) {
       return [transaction];
     }
 

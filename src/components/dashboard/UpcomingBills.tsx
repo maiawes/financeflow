@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Transaction, useTransactions } from "@/hooks/useTransactions";
 import { format, isBefore } from "date-fns";
 import { parseStoredDate } from "@/lib/date";
+import { formatTransactionDescription } from "@/lib/transactions";
 
 export function UpcomingBills() {
   const { transactions, loading } = useTransactions("expense");
@@ -79,7 +80,7 @@ export function UpcomingBills() {
                       <Icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium leading-none">{bill.desc}</p>
+                      <p className="text-sm font-medium leading-none">{formatTransactionDescription(bill)}</p>
                       <p className="text-xs text-muted-foreground mt-1">{label} ({format(dueDate, "dd/MM")})</p>
                     </div>
                   </div>

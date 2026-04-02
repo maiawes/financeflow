@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { normalizeStoredDate, parseStoredDate } from "@/lib/date";
+import { addMonths, format } from "date-fns";
 import {
   expandRecurringExpenses,
   getOccurrenceMonthFromTransactionId,
@@ -21,6 +22,9 @@ export interface Transaction {
   occurrenceMonth?: string;
   isRecurring?: boolean;
   lastPaidMonth?: string | null;
+  installmentGroupId?: string;
+  installmentNumber?: number;
+  installmentTotal?: number;
 }
 
 export function useTransactions(type?: "income" | "expense") {
@@ -67,9 +71,47 @@ export function useTransactions(type?: "income" | "expense") {
     return () => unsubscribe();
   }, [type]);
 
-  const addTransaction = async (data: Omit<Transaction, "id">) => {
+  const addTransaction = async (
+    data: Omit<Transaction, "id">,
+    options?: { installmentCount?: number },
+  ) => {
+    const installmentCount = data.type === "expense" ? Math.max(1, options?.installmentCount ?? 1) : 1;
+
+    if (data.type === "expense" && installmentCount > 1) {
+      const parsedDate = parseStoredDate(data.date);
+
+      if (!parsedDate) {
+        throw new Error("Use uma data válida para gerar as parcelas.");
+      }
+
+      const batch = writeBatch(db);
+      const createdAt = new Date().toISOString();
+      const installmentGroupId = globalThis.crypto?.randomUUID?.() ?? `parcel-${Date.now()}`;
+
+      for (let index = 0; index < installmentCount; index += 1) {
+        const installmentDate = format(addMonths(parsedDate, index), "yyyy-MM-dd");
+        const transactionRef = doc(collection(db, "transactions"));
+
+        batch.set(transactionRef, {
+          ...data,
+          date: installmentDate,
+          status: index === 0 ? data.status : "pendente",
+          isRecurring: false,
+          installmentGroupId,
+          installmentNumber: index + 1,
+          installmentTotal: installmentCount,
+          lastPaidMonth: index === 0 && data.status === "pago" ? getTransactionMonth(installmentDate) : null,
+          createdAt,
+        });
+      }
+
+      await batch.commit();
+      return;
+    }
+
     return addDoc(collection(db, "transactions"), {
       ...data,
+      isRecurring: data.isRecurring ?? false,
       lastPaidMonth: data.type === "expense" && data.status === "pago" ? getTransactionMonth(data.date) : null,
       createdAt: new Date().toISOString(),
     });

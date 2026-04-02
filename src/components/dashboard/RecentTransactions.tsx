@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { isAfter } from "date-fns";
 import { formatStoredDate, parseStoredDate } from "@/lib/date";
+import { formatTransactionDescription } from "@/lib/transactions";
 
 export function RecentTransactions() {
   const { transactions, loading } = useTransactions();
@@ -51,7 +52,7 @@ export function RecentTransactions() {
                     {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                   </div>
                   <div>
-                    <p className="text-sm font-medium leading-none">{tx.desc}</p>
+                    <p className="text-sm font-medium leading-none">{formatTransactionDescription(tx)}</p>
                     <p className="text-xs text-muted-foreground mt-1.5">{tx.cat} • {tx.date ? formatStoredDate(tx.date, "dd MMM yyyy") : 'S/ data'}</p>
                   </div>
                 </div>

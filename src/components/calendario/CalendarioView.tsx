@@ -7,6 +7,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useState } from "react";
 import { format, getDaysInMonth, startOfMonth, getDay, addMonths, subMonths, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatTransactionDescription } from "@/lib/transactions";
 
 const DAYS_OF_WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -81,9 +82,9 @@ export function CalendarioView() {
                       "px-1.5 py-1 text-[9px] sm:text-[10px] rounded flex flex-col leading-tight overflow-hidden",
                       evt.type === "income" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-rose-500/10 text-rose-700 dark:text-rose-400"
                     )}
-                    title={`${evt.desc} - R$ ${evt.value}`}
+                    title={`${formatTransactionDescription(evt)} - R$ ${evt.value}`}
                   >
-                    <span className="font-bold truncate">{evt.desc}</span>
+                    <span className="font-bold truncate">{formatTransactionDescription(evt)}</span>
                     <span className="opacity-80 font-medium truncate hidden sm:inline-block">R$ {evt.value}</span>
                   </div>
                 ))}
