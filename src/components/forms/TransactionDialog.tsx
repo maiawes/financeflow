@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Transaction } from "@/hooks/useTransactions";
 import { normalizeStoredDate } from "@/lib/date";
 import { useTransactions } from "@/hooks/useTransactions";
+import { AlertCircle } from "lucide-react";
 
 interface TransactionDialogProps {
   open: boolean;
@@ -21,7 +22,7 @@ interface TransactionDialogProps {
 export function TransactionDialog({ open, onOpenChange, type, defaultValues }: TransactionDialogProps) {
   const isEdit = !!defaultValues;
   const isIncome = type === "income";
-  const { addTransaction, updateTransaction } = useTransactions(type);
+  const { addTransaction, updateTransaction, recreateTransaction } = useTransactions(type);
 
   const [desc, setDesc] = useState("");
   const [value, setValue] = useState("");
@@ -31,8 +32,9 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
   const [paymentMode, setPaymentMode] = useState<"single" | "installment">("single");
   const [installmentCount, setInstallmentCount] = useState("2");
   const [loading, setLoading] = useState(false);
+  
   const isExpenseInstallment = !isIncome && paymentMode === "installment";
-  const isEditingInstallment = !isIncome && (defaultValues?.installmentTotal ?? 0) > 1;
+  const wasInstallment = !isIncome && (defaultValues?.installmentTotal ?? 0) > 1;
 
   useEffect(() => {
     if (open) {
@@ -41,7 +43,6 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
         setValue(defaultValues.value ? String(defaultValues.value) : "");
         setCat(defaultValues.cat || "outro");
         
-        // Formatar data para YYYY-MM-DD se vier diferente
         if (defaultValues.date && defaultValues.date.includes("/")) {
            const [d, m, y] = defaultValues.date.split("/");
            setDate(`${y}-${m}-${d}`);
@@ -97,8 +98,14 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
 
     try {
       if (isEdit && defaultValues?.id) {
-        await updateTransaction(defaultValues.id, data);
-        toast.success(`${isIncome ? "Receita" : "Despesa"} atualizada!`);
+        // Se for despesa e envolve parcelas (agora ou no default), usamos recreateTransaction para a Opção A
+        if (!isIncome && (isExpenseInstallment || wasInstallment)) {
+          await recreateTransaction(defaultValues.id, defaultValues.installmentGroupId, data, { installmentCount: parsedInstallmentCount });
+          toast.success("Estrutura da transação atualizada com sucesso!");
+        } else {
+          await updateTransaction(defaultValues.id, data);
+          toast.success(`${isIncome ? "Receita" : "Despesa"} atualizada!`);
+        }
       } else {
         await addTransaction(data, { installmentCount: parsedInstallmentCount });
         toast.success(
@@ -132,7 +139,7 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
               <Input id="value" type="number" placeholder={isExpenseInstallment ? "125.00" : "250.00"} value={value} onChange={(e) => setValue(e.target.value)} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="date">Data</Label>
+              <Label htmlFor="date">Data de Início</Label>
               <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
           </div>
@@ -143,12 +150,12 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
                 <Select
                   value={paymentMode}
                   onValueChange={(val) => setPaymentMode(val === "installment" ? "installment" : "single")}
-                  disabled={isEdit}
+                  // Removed disabled={isEdit}
                 >
                   <SelectTrigger id="payment-mode"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="single">À vista</SelectItem>
-                    <SelectItem value="installment">Parcelado</SelectItem>
+                    <SelectItem value="single">Uma parcela somente</SelectItem>
+                    <SelectItem value="installment">Em várias parcelas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -161,7 +168,7 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
                   placeholder="Ex: 10"
                   value={isExpenseInstallment ? installmentCount : ""}
                   onChange={(e) => setInstallmentCount(e.target.value)}
-                  disabled={!isExpenseInstallment || isEdit}
+                  disabled={!isExpenseInstallment} // Removed || isEdit
                 />
               </div>
             </div>
@@ -203,16 +210,19 @@ export function TransactionDialog({ open, onOpenChange, type, defaultValues }: T
               </Select>
             </div>
           </div>
-          {!isIncome && !isEdit && isExpenseInstallment ? (
-            <p className="text-xs text-muted-foreground">
-              O valor informado sera usado como valor de cada parcela, e as proximas parcelas serao lancadas automaticamente nos meses seguintes.
-            </p>
+          
+          {/* Alertas sobre parcelamentos */}
+          {!isIncome && isExpenseInstallment ? (
+            <div className="flex gap-2 items-start p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                {isEdit 
+                  ? "Aviso: Salvar as alterações apagará o histórico da transação anterior e criará novas parcelas do zero a partir da Data de Início." 
+                  : "O valor será replicado mês a mês na Data de Início automaticamente."}
+              </p>
+            </div>
           ) : null}
-          {!isIncome && isEdit && isEditingInstallment ? (
-            <p className="text-xs text-muted-foreground">
-              Esta edicao altera somente esta parcela do lancamento.
-            </p>
-          ) : null}
+          
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
