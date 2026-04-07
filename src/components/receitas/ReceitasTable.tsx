@@ -9,7 +9,7 @@ import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { Transaction, useTransactions } from "@/hooks/useTransactions";
 import { formatStoredDate } from "@/lib/date";
-import { formatMonthKey, isTransactionInMonth } from "@/lib/transactions";
+import { formatMonthKey, formatTransactionDescription, isTransactionInMonth } from "@/lib/transactions";
 
 interface ReceitasTableProps {
   referenceMonth: string;
@@ -45,7 +45,7 @@ export function ReceitasTable({ referenceMonth }: ReceitasTableProps) {
         <TableBody>
           {monthTransactions.map((rec) => (
             <TableRow key={rec.id} className="group hover:bg-muted/50 transition-colors">
-              <TableCell className="font-medium text-foreground">{rec.desc}</TableCell>
+              <TableCell className="font-medium text-foreground">{formatTransactionDescription(rec)}</TableCell>
               <TableCell>
                 <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground font-normal">
                   {rec.cat}
@@ -74,15 +74,23 @@ export function ReceitasTable({ referenceMonth }: ReceitasTableProps) {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setEditItem(rec)}>Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={async () => {
-                      const newStatus = rec.status === 'recebido' ? 'pendente' : 'recebido';
-                      await updateTransaction(rec.id, { status: newStatus });
-                      toast.success(`Status de ${rec.desc} alterado!`);
+                      try {
+                        const newStatus = rec.status === 'recebido' ? 'pendente' : 'recebido';
+                        await updateTransaction(rec.id, { status: newStatus });
+                        toast.success(`Status alterado!`);
+                      } catch {
+                        toast.error("Erro ao atualizar status.");
+                      }
                     }}>
                       Marcar como {rec.status === 'recebido' ? 'Pendente' : 'Recebido'}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={async () => {
-                      await deleteTransaction(rec.id);
-                      toast.error(`${rec.desc} foi excluído!`);
+                      try {
+                        await deleteTransaction(rec.id);
+                        toast.error("Receita excluída.");
+                      } catch {
+                        toast.error("Erro ao excluir receita.");
+                      }
                     }} className="text-rose-500 focus:text-rose-500">Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

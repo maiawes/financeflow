@@ -70,8 +70,12 @@ export function VariableExpensesTable({ expenses, loading, monthLabel }: Variabl
                     <DropdownMenuItem onClick={() => setEditItem(expense)}>Editar</DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={async () => {
-                        await deleteVariableExpense(expense.id);
-                        toast.error(`Gasto ${expense.name} removido.`);
+                        try {
+                          await deleteVariableExpense(expense.id);
+                          toast.error(`Gasto ${expense.name} removido.`);
+                        } catch {
+                          toast.error("Erro ao excluir gasto.");
+                        }
                       }}
                       className="text-rose-500 focus:text-rose-500"
                     >

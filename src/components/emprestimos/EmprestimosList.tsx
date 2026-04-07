@@ -28,7 +28,7 @@ export function EmprestimosList() {
         const isRecurring = loan.isRecurring;
         const progress = !isRecurring && loan.totalInstallments > 0 ? (loan.paidInstallments / loan.totalInstallments) * 100 : 0;
         const remainingInstallments = Math.max(0, loan.totalInstallments - loan.paidInstallments);
-        const remainingAmount = Math.max(0, loan.totalValue - (loan.paidInstallments * loan.installmentValue));
+        const remainingAmount = Math.max(0, (loan.totalInstallments - loan.paidInstallments) * loan.installmentValue);
 
         return (
           <Card key={loan.id} className="group overflow-hidden relative shadow-sm hover:shadow-md transition-shadow">
@@ -52,17 +52,25 @@ export function EmprestimosList() {
                     <DropdownMenuItem onClick={() => setEditItem(loan)}>Editar</DropdownMenuItem>
                     {!isRecurring ? (
                       <DropdownMenuItem onClick={async () => {
-                        if (loan.paidInstallments < loan.totalInstallments) {
-                          await updateLoan(loan.id, { paidInstallments: loan.paidInstallments + 1 });
-                          toast.success(`Parcela do empréstimo ${loan.name} paga!`);
-                        } else {
-                          toast.error(`Empréstimo ${loan.name} já quitado!`);
+                        try {
+                          if (loan.paidInstallments < loan.totalInstallments) {
+                            await updateLoan(loan.id, { paidInstallments: loan.paidInstallments + 1 });
+                            toast.success(`Parcela do empréstimo ${loan.name} paga!`);
+                          } else {
+                            toast.error(`Empréstimo ${loan.name} já quitado!`);
+                          }
+                        } catch {
+                          toast.error("Erro ao registrar pagamento.");
                         }
                       }}>Pagar Parcela Atual</DropdownMenuItem>
                     ) : null}
                     <DropdownMenuItem onClick={async () => {
-                      await deleteLoan(loan.id);
-                      toast.error(`Empréstimo ${loan.name} apagado.`);
+                      try {
+                        await deleteLoan(loan.id);
+                        toast.error(`Empréstimo ${loan.name} apagado.`);
+                      } catch {
+                        toast.error("Erro ao excluir empréstimo.");
+                      }
                     }} className="text-rose-500 focus:text-rose-500">Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -101,7 +109,7 @@ export function EmprestimosList() {
                   <Progress value={progress} className="h-2 bg-muted-foreground/15 [&>div]:bg-amber-500" />
                   <div className="flex justify-between text-[11px] pt-1 text-muted-foreground">
                     <span>{loan.paidInstallments} pagas</span>
-                    <span>Dívida: R$ {remainingAmount.toLocaleString("pt-BR")}</span>
+                    <span>Dívida: R$ {remainingAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               )}

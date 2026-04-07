@@ -27,6 +27,11 @@ export function RecentTransactions() {
       const transactionDate = parseStoredDate(transaction.date);
       return transactionDate ? !isAfter(transactionDate, today) : true;
     })
+    .sort((a, b) => {
+      const dateA = parseStoredDate(a.date)?.getTime() ?? 0;
+      const dateB = parseStoredDate(b.date)?.getTime() ?? 0;
+      return dateB - dateA;
+    })
     .slice(0, 5);
 
   return (

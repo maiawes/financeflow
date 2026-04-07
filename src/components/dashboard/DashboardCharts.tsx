@@ -78,7 +78,7 @@ export function DashboardCharts() {
             <Tooltip 
               contentStyle={{ backgroundColor: "hsl(var(--background))", borderRadius: "8px", border: "1px solid hsl(var(--border))", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
               itemStyle={{ fontSize: "14px", fontWeight: "500" }}
-              formatter={(value) => [`R$ ${Number(value ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]}
+              formatter={(value, name) => [`R$ ${Number(value ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, name]}
             />
             <Area type="monotone" dataKey="receitas" name="Receitas" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorReceitas)" />
             <Area type="monotone" dataKey="despesas" name="Despesas" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorDespesas)" />

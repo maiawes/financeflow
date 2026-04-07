@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const totalIncome = currentMonthIncomes.reduce((acc, curr) => acc + curr.value, 0);
   const totalExpense = currentMonthExpenses.reduce((acc, curr) => acc + curr.value, 0);
   const totalLoans = loans.reduce((acc, curr) => acc + curr.installmentValue, 0);
-  const balance = totalIncome - totalExpense;
+  const balance = totalIncome - totalExpense - totalLoans;
   const previousBalance =
     previousMonthIncomes.reduce((acc, curr) => acc + curr.value, 0) -
     previousMonthExpenses.reduce((acc, curr) => acc + curr.value, 0);

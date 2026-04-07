@@ -26,7 +26,7 @@ export function RelatoriosCharts() {
   const currentMonthExpenses = expenses.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
 
   const grouped = currentMonthExpenses.reduce((acc, curr) => {
-    acc[curr.cat] = (acc[curr.cat] || 0) + curr.value;
+    acc[curr.cat] = (acc[curr.cat] || 0) + (curr.value ?? 0);
     return acc;
   }, {} as Record<string, number>);
 

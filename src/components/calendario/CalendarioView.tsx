@@ -12,8 +12,12 @@ import { formatTransactionDescription } from "@/lib/transactions";
 const DAYS_OF_WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export function CalendarioView() {
-  const { transactions } = useTransactions();
+  const { transactions, loading } = useTransactions();
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  if (loading) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando calendario...</div>;
+  }
 
   const daysInMonth = getDaysInMonth(currentDate);
   const start = startOfMonth(currentDate);
@@ -75,9 +79,9 @@ export function CalendarioView() {
               </div>
               
               <div className="space-y-1">
-                {dayEvents.map((evt, idx) => (
-                  <div 
-                    key={idx} 
+                {dayEvents.map((evt) => (
+                  <div
+                    key={evt.id} 
                     className={cn(
                       "px-1.5 py-1 text-[9px] sm:text-[10px] rounded flex flex-col leading-tight overflow-hidden",
                       evt.type === "income" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-rose-500/10 text-rose-700 dark:text-rose-400"

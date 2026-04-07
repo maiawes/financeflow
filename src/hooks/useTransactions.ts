@@ -106,7 +106,7 @@ export function useTransactions(type?: "income" | "expense") {
       }
 
       await batch.commit();
-      return;
+      return { installmentGroupId, count: installmentCount };
     }
 
     return addDoc(collection(db, "transactions"), {

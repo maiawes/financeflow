@@ -69,17 +69,25 @@ export function SubscriptionsTable() {
                     <DropdownMenuItem onClick={() => setEditItem(subscription)}>Editar</DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={async () => {
-                        const nextStatus = subscription.status === "active" ? "paused" : "active";
-                        await updateSubscription(subscription.id, { status: nextStatus });
-                        toast.success(`Assinatura ${subscription.name} ${nextStatus === "active" ? "reativada" : "pausada"}!`);
+                        try {
+                          const nextStatus = subscription.status === "active" ? "paused" : "active";
+                          await updateSubscription(subscription.id, { status: nextStatus });
+                          toast.success(`Assinatura ${subscription.name} ${nextStatus === "active" ? "reativada" : "pausada"}!`);
+                        } catch {
+                          toast.error("Erro ao atualizar assinatura.");
+                        }
                       }}
                     >
                       {subscription.status === "active" ? "Pausar" : "Reativar"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={async () => {
-                        await deleteSubscription(subscription.id);
-                        toast.error(`Assinatura ${subscription.name} removida.`);
+                        try {
+                          await deleteSubscription(subscription.id);
+                          toast.error(`Assinatura ${subscription.name} removida.`);
+                        } catch {
+                          toast.error("Erro ao excluir assinatura.");
+                        }
                       }}
                       className="text-rose-500 focus:text-rose-500"
                     >

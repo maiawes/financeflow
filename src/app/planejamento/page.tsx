@@ -4,8 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, TrendingUp, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { SimuladorCenarios } from "@/components/planejamento/SimuladorCenarios";
+import dynamic from "next/dynamic";
 import { useTransactions } from "@/hooks/useTransactions";
+
+const SimuladorCenarios = dynamic(() => import("@/components/planejamento/SimuladorCenarios").then(m => ({ default: m.SimuladorCenarios })), {
+  ssr: false,
+  loading: () => <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando simulador...</div>,
+});
 import { Loader2 } from "lucide-react";
 import { subMonths } from "date-fns";
 import { parseStoredDate } from "@/lib/date";
@@ -85,8 +90,8 @@ export default function PlanejamentoPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button size="sm" onClick={() => toast.success(`${referenceMonthLabel} fechado com sucesso!`)}>
-            Fechar Mês Atual
+          <Button size="sm" disabled onClick={() => toast.info("Em breve!")} title="Funcionalidade em desenvolvimento">
+            Fechar Mês Atual <span className="ml-1 text-[10px] opacity-70">(em breve)</span>
           </Button>
         </div>
       </div>

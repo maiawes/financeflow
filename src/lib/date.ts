@@ -30,7 +30,11 @@ export function parseStoredDate(value?: string | null) {
 export function normalizeStoredDate(value?: string | null) {
   const parsedDate = parseStoredDate(value);
 
-  return parsedDate ? format(parsedDate, "yyyy-MM-dd") : "";
+  if (!parsedDate) {
+    return format(new Date(), "yyyy-MM-dd");
+  }
+
+  return format(parsedDate, "yyyy-MM-dd");
 }
 
 export function formatStoredDate(value?: string | null, pattern = "dd/MM/yyyy") {

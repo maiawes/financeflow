@@ -74,15 +74,23 @@ export function DespesasTable({ referenceMonth }: DespesasTableProps) {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setEditItem(item)}>Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={async () => {
-                      const newStatus = item.status === 'pago' ? 'pendente' : 'pago';
-                      await updateTransaction(item.id, { status: newStatus });
-                      toast.success(`Status de ${item.desc} alterado com sucesso!`);
+                      try {
+                        const newStatus = item.status === 'pago' ? 'pendente' : 'pago';
+                        await updateTransaction(item.id, { status: newStatus });
+                        toast.success(`Status de ${item.desc} alterado com sucesso!`);
+                      } catch {
+                        toast.error("Erro ao atualizar status.");
+                      }
                     }}>
                       Marcar como {item.status === 'pago' ? 'Pendente' : 'Pago'}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={async () => {
-                      await deleteTransaction(item.id);
-                      toast.error(`Registro ${item.desc} apagado.`);
+                      try {
+                        await deleteTransaction(item.id);
+                        toast.error(`Registro ${item.desc} apagado.`);
+                      } catch {
+                        toast.error("Erro ao excluir despesa.");
+                      }
                     }} className="text-rose-500 focus:text-rose-500">Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
