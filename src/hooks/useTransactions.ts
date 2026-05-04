@@ -200,13 +200,7 @@ export function useTransactions(type?: "income" | "expense") {
       "yyyy-MM-dd",
     );
     const targetMonthDate = parse(`${targetMonth}-01`, "yyyy-MM-dd", new Date());
-    const q = query(
-      collection(db, "transactions"),
-      where("type", "==", "expense"),
-      where("date", ">=", sourceMonthStart),
-      where("date", "<", sourceMonthEnd),
-    );
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(collection(db, "transactions"));
 
     const batch = writeBatch(db);
     let copied = 0;
@@ -214,6 +208,10 @@ export function useTransactions(type?: "income" | "expense") {
 
     snapshot.forEach((docSnap) => {
       const raw = docSnap.data() as Transaction;
+      if (raw.type !== "expense" || raw.date < sourceMonthStart || raw.date >= sourceMonthEnd) {
+        return;
+      }
+
       const isInstallment = !!(raw.installmentTotal && raw.installmentTotal > 1);
       const installmentNumber = raw.installmentNumber ?? 0;
       const isActiveInstallment = isInstallment && (raw.status !== "pago" || installmentNumber < raw.installmentTotal!);
@@ -237,9 +235,13 @@ export function useTransactions(type?: "income" | "expense") {
       const transactionRef = doc(collection(db, "transactions"));
 
       batch.set(transactionRef, {
-        ...raw,
+        desc: raw.desc,
+        value: raw.value,
+        type: raw.type,
+        cat: raw.cat,
         date: format(copiedDate, "yyyy-MM-dd"),
         status: "pendente",
+        isRecurring: false,
         lastPaidMonth: null,
         sourceId: raw.sourceId ?? null,
         occurrenceMonth: raw.occurrenceMonth ?? null,
