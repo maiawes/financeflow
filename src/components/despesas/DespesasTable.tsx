@@ -10,6 +10,7 @@ import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { Transaction, useTransactions } from "@/hooks/useTransactions";
 import { formatStoredDate } from "@/lib/date";
 import { formatMonthKey, formatTransactionDescription, isTransactionInMonth } from "@/lib/transactions";
+import { parseStoredDate } from "@/lib/date";
 
 interface DespesasTableProps {
   referenceMonth: string;
@@ -18,7 +19,13 @@ interface DespesasTableProps {
 export function DespesasTable({ referenceMonth }: DespesasTableProps) {
   const { transactions, loading, deleteTransaction, updateTransaction } = useTransactions("expense");
   const [editItem, setEditItem] = useState<Transaction | null>(null);
-  const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, referenceMonth));
+  const monthTransactions = transactions
+    .filter((transaction) => isTransactionInMonth(transaction, referenceMonth))
+    .sort((a, b) => {
+      const dateA = parseStoredDate(a.date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const dateB = parseStoredDate(b.date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return dateA - dateB;
+    });
   const referenceMonthLabel = formatMonthKey(referenceMonth);
 
   if (loading) {
