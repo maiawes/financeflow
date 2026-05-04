@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, writeBatch, getDocs, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { normalizeStoredDate, parseStoredDate } from "@/lib/date";
-import { addMonths, format } from "date-fns";
+import { addMonths, format, parse, getDate, getDaysInMonth, setDate } from "date-fns";
 import {
   expandRecurringExpenses,
   getOccurrenceMonthFromTransactionId,
@@ -190,9 +190,86 @@ export function useTransactions(type?: "income" | "expense") {
     await batch.commit();
   };
 
+  const copyFixedExpensesToNextMonth = async (
+    sourceMonth: string,
+    targetMonth: string,
+  ) => {
+    const sourceMonthStart = `${sourceMonth}-01`;
+    const sourceMonthEnd = format(
+      addMonths(parse(sourceMonthStart, "yyyy-MM-dd", new Date()), 1),
+      "yyyy-MM-dd",
+    );
+    const targetMonthDate = parse(`${targetMonth}-01`, "yyyy-MM-dd", new Date());
+    const q = query(
+      collection(db, "transactions"),
+      where("type", "==", "expense"),
+      where("date", ">=", sourceMonthStart),
+      where("date", "<", sourceMonthEnd),
+    );
+    const snapshot = await getDocs(q);
+
+    const batch = writeBatch(db);
+    let copied = 0;
+    let skipped = 0;
+
+    snapshot.forEach((docSnap) => {
+      const raw = docSnap.data() as Transaction;
+      const isInstallment = !!(raw.installmentTotal && raw.installmentTotal > 1);
+      const installmentNumber = raw.installmentNumber ?? 0;
+      const isActiveInstallment = isInstallment && (raw.status !== "pago" || installmentNumber < raw.installmentTotal!);
+
+      if (raw.isRecurring || isActiveInstallment) {
+        skipped += 1;
+        return;
+      }
+
+      const parsedDate = parseStoredDate(raw.date);
+
+      if (!parsedDate) {
+        skipped += 1;
+        return;
+      }
+
+      const copiedDate = setDate(
+        targetMonthDate,
+        Math.min(getDate(parsedDate), getDaysInMonth(targetMonthDate)),
+      );
+      const transactionRef = doc(collection(db, "transactions"));
+
+      batch.set(transactionRef, {
+        ...raw,
+        date: format(copiedDate, "yyyy-MM-dd"),
+        status: "pendente",
+        lastPaidMonth: null,
+        sourceId: raw.sourceId ?? null,
+        occurrenceMonth: raw.occurrenceMonth ?? null,
+        installmentGroupId: null,
+        installmentNumber: null,
+        installmentTotal: null,
+        createdAt: new Date().toISOString(),
+      });
+      copied += 1;
+    });
+
+    if (copied === 0) {
+      return { copied, skipped };
+    }
+
+    await batch.commit();
+    return { copied, skipped };
+  };
+
   const deleteTransaction = async (id: string) => {
     return deleteDoc(doc(db, "transactions", resolveTransactionDocumentId(id)));
   };
 
-  return { transactions, loading, addTransaction, updateTransaction, recreateTransaction, deleteTransaction };
+  return {
+    transactions,
+    loading,
+    addTransaction,
+    updateTransaction,
+    recreateTransaction,
+    copyFixedExpensesToNextMonth,
+    deleteTransaction,
+  };
 }

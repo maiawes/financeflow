@@ -9,6 +9,7 @@ import { useState } from "react";
 import { TransactionDialog } from "@/components/forms/TransactionDialog";
 import { useTransactions } from "@/hooks/useTransactions";
 import { Input } from "@/components/ui/input";
+import { parse, addMonths, format } from "date-fns";
 import {
   formatMonthKey,
   getCurrentMonthKey,
@@ -18,8 +19,9 @@ import {
 
 export default function DespesasPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const { transactions, loading } = useTransactions("expense");
+  const { transactions, loading, copyFixedExpensesToNextMonth } = useTransactions("expense");
 
   const currentMonth = getCurrentMonthKey();
   const referenceMonth = getReferenceMonthFromTransactions(transactions, currentMonth);
@@ -28,6 +30,9 @@ export default function DespesasPage() {
   const effectiveMonthLabel = formatMonthKey(effectiveMonth);
   const monthTransactions = transactions.filter((transaction) => isTransactionInMonth(transaction, effectiveMonth));
   const isShowingFallbackMonth = effectiveMonth !== currentMonth;
+  const nextMonth = format(addMonths(parse(`${effectiveMonth}-01`, "yyyy-MM-dd", new Date()), 1), "yyyy-MM");
+  const nextMonthLabel = formatMonthKey(nextMonth, "MMMM");
+  const canCopyToNextMonth = Boolean(effectiveMonth && nextMonth);
 
   const totalPago = monthTransactions
     .filter((transaction) => transaction.status === "pago")
@@ -38,6 +43,27 @@ export default function DespesasPage() {
     .reduce((acc, curr) => acc + curr.value, 0);
 
   const previsaoTotal = totalPago + aPagar;
+
+  const handleCopyFixedExpenses = async () => {
+    setIsCopying(true);
+    try {
+      const { copied, skipped } = await copyFixedExpensesToNextMonth(effectiveMonth, nextMonth);
+      if (copied > 0) {
+        toast.success(`Copiadas ${copied} despesa(s) para ${formatMonthKey(nextMonth)}.`);
+        setSelectedMonth(nextMonth);
+      } else {
+        toast.info("Nenhuma despesa encontrada para copiar para o próximo mês.");
+      }
+
+      if (skipped > 0) {
+        toast.info(`${skipped} despesa(s) não foram copiadas por estarem em parcelamento ativo.`);
+      }
+    } catch {
+      toast.error("Erro ao copiar despesas para o próximo mês.");
+    } finally {
+      setIsCopying(false);
+    }
+  };
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 md:pb-8">
@@ -70,6 +96,15 @@ export default function DespesasPage() {
             disabled={selectedMonth === null}
           >
             Vencimentos do mês-base
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyFixedExpenses}
+            disabled={loading || isCopying || !canCopyToNextMonth}
+          >
+            {isCopying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Copiar para {nextMonthLabel}
           </Button>
           <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => toast.success("Planilha de Despesas baixada com sucesso!")}>
             <Download className="w-4 h-4 mr-2" />
